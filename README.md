@@ -10,7 +10,7 @@ Disciplina: Engenharia de Dados
 Pós-Graduação em Ciência de Dados e Analytics  
 Pontifícia Universidade Católica do Rio de Janeiro (PUC-Rio)
 
-**Aluno(a):** Danilo Leandro Gomes dos Santos
+**Aluno(a):** SEU NOME COMPLETO
 
 Setembro de 2026
 
@@ -20,6 +20,8 @@ Setembro de 2026
 *Fonte de dados: SUSEP — Sistema de Estatísticas da SUSEP (SES)*
 
 </div>
+
+---
 
 ## Glossário de siglas e termos
 
@@ -53,7 +55,7 @@ Setembro de 2026
 | **Saldo líquido de portabilidade** | Portabilidade aceita − portabilidade cedida |
 | **Captação líquida** | FLCR + saldo líquido de portabilidade (conceito usado pelo mercado) |
 | **Taxa de resgate** | Resgates do período ÷ PMBaC média do período |
-| **HHI** | Índice Herfindahl-Hirschman — medida de concentração de mercado: soma dos quadrados das participações (em %) de cada grupo; vai de 0 (pulverizado) a 10.000 (monopólio) |
+| **HHI** | Índice Herfindahl-Hirschman — medida de concentração de mercado: soma dos quadrados das participações (em %) de cada unidade; vai de 0 (pulverizado) a 10.000 (monopólio) |
 | **Top-5** | Participação somada dos 5 maiores grupos no mercado |
 | **Unidade econômica** | Grupo econômico vigente no mês ou, para empresas do código 99999, a própria empresa |
 | **YTD / jan–jul** | *Year to date* — acumulado de janeiro a julho, usado para comparar 2026 (ano incompleto) com os anos anteriores |
@@ -69,7 +71,10 @@ Setembro de 2026
 | **PK / FK** | *Primary Key* (chave primária) / *Foreign Key* (chave estrangeira) |
 | **Linhagem (*lineage*)** | Rastro de origem de cada tabela: de quais tabelas ela foi gerada |
 | **Quarentena** | Tabela onde ficam os registros que não puderam ser interpretados com segurança, preservados sem descarte |
+
 ---
+
+## Visão geral do repositório
 
 Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog + Delta Lake + PySpark/Spark SQL), organizado na arquitetura medalhão **Bronze → Silver → Gold**, a partir da base pública do **SES — Sistema de Estatísticas da SUSEP**.
 
@@ -115,7 +120,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 ### Perguntas de negócio
 | # | Pergunta |
 |---|---|
-| Q1 | Como evoluíram contribuições, resgates e FLCR (contribuições − resgates) de VGBL e PGBL de 2014 a 2025, e como jan–jul/2026 se compara a jan–jul dos anos anteriores? |
+| Q1 | Como evoluíram contribuições, resgates e FLCR de VGBL e PGBL de 2014 a 2025, e como jan–jul/2026 se compara a jan–jul dos anos anteriores? |
 | Q2 | Como evoluiu a taxa de resgate (resgates ÷ PMBaC média) de VGBL e PGBL? |
 | Q3 | Qual o grau de concentração das contribuições entre grupos econômicos (participação dos 5 maiores e HHI), por produto e ano? |
 | Q4 | Qual o saldo líquido de portabilidade por grupo econômico (unidade econômica) e qual a sua magnitude relativa às contribuições? |
@@ -644,5 +649,3 @@ As principais ressalvas são os valores nominais e a portabilidade de mercado n�
 - Decreto nº 8.777/2016 — Política de Dados Abertos do Poder Executivo federal.
 - Databricks — Free Edition limitations: https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
 - Databricks — Medallion architecture; Unity Catalog (constraints, comments e data lineage): https://docs.databricks.com
-
----
