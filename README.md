@@ -21,6 +21,54 @@ Setembro de 2026
 
 </div>
 
+## Glossário de siglas e termos
+
+**Mercado de previdência**
+
+| Sigla / termo | Significado |
+|---|---|
+| **SUSEP** | Superintendência de Seguros Privados — autarquia federal que regula e fiscaliza seguros, previdência complementar aberta e capitalização |
+| **SES** | Sistema de Estatísticas da SUSEP — base pública de onde vêm todos os dados deste trabalho |
+| **FIP** | Formulário de Informações Periódicas — relatório que as empresas supervisionadas enviam à SUSEP; é a origem dos dados do SES |
+| **EAPP** | Entidade Aberta de Previdência Complementar — empresa autorizada a vender planos de previdência abertos ao público |
+| **Previdência complementar aberta** | Planos de previdência privada vendidos ao público por seguradoras e EAPPs (diferente dos fundos de pensão fechados, ligados a uma empresa ou categoria) |
+| **PGBL** | Plano Gerador de Benefício Livre — plano de previdência cujas contribuições podem ser deduzidas da base do IR (até 12% da renda bruta, na declaração completa); o IR incide sobre o valor total resgatado |
+| **VGBL** | Vida Gerador de Benefício Livre — seguro de pessoas com cobertura por sobrevivência; não há dedução no IR, e o imposto incide apenas sobre os rendimentos |
+| **PAGP, PRGP, VAGP, VRGP** | Modalidades menos comuns de planos (P = previdência, V = vida) com atualização ou remuneração garantida; aparecem nos dados de portabilidade, mas ficaram fora do escopo |
+| **Previdência tradicional** | Planos antigos com rentabilidade mínima garantida; fora do escopo deste MVP |
+| **Contribuição** | Valor aportado pelo participante no plano (entrada de recursos) |
+| **Resgate** | Retirada de recursos pelo participante antes ou em vez de receber um benefício (saída de recursos); pode ser total ou parcial |
+| **Benefício** | Pagamento de renda ao participante na fase de recebimento (aposentadoria, pensão) |
+| **Portabilidade** | Transferência da reserva acumulada de um plano para outro, geralmente entre empresas diferentes, sem resgate e sem incidência de IR. **Aceita** = recebida pela empresa; **cedida** = enviada |
+| **PMBaC** | Provisão Matemática de Benefícios a Conceder — reserva acumulada pelos participantes que ainda não recebem benefício; é o "estoque" de recursos do plano |
+| **Grupo econômico** | Conjunto de empresas sob o mesmo controle (ex.: todas as seguradoras de um mesmo banco) |
+| **Código 99999** | Código genérico usado pela SUSEP para empresas classificadas como "OUTROS GRUPOS"; não representa um grupo real |
+| **IOF** | Imposto sobre Operações Financeiras — citado no contexto das mudanças tributárias sobre aportes em VGBL em 2025 |
+
+**Métricas definidas neste trabalho**
+
+| Sigla / termo | Significado |
+|---|---|
+| **FLCR** | Fluxo Líquido de Contribuições e Resgates = contribuições − resgates |
+| **Saldo líquido de portabilidade** | Portabilidade aceita − portabilidade cedida |
+| **Captação líquida** | FLCR + saldo líquido de portabilidade (conceito usado pelo mercado) |
+| **Taxa de resgate** | Resgates do período ÷ PMBaC média do período |
+| **HHI** | Índice Herfindahl-Hirschman — medida de concentração de mercado: soma dos quadrados das participações (em %) de cada grupo; vai de 0 (pulverizado) a 10.000 (monopólio) |
+| **Top-5** | Participação somada dos 5 maiores grupos no mercado |
+| **Unidade econômica** | Grupo econômico vigente no mês ou, para empresas do código 99999, a própria empresa |
+| **YTD / jan–jul** | *Year to date* — acumulado de janeiro a julho, usado para comparar 2026 (ano incompleto) com os anos anteriores |
+
+**Termos técnicos**
+
+| Sigla / termo | Significado |
+|---|---|
+| **AAAAMM** | Formato de data usado no SES: ano com 4 dígitos + mês com 2 dígitos (ex.: 202507 = julho de 2025) |
+| **Bronze / Silver / Gold** | Camadas da arquitetura medalhão: dado bruto → dado limpo e padronizado → dado modelado para análise |
+| **Delta Lake** | Formato de tabela usado pelo Databricks, com transações ACID e histórico de versões |
+| **Unity Catalog** | Catálogo de dados do Databricks: organiza tabelas, comentários, permissões e linhagem |
+| **PK / FK** | *Primary Key* (chave primária) / *Foreign Key* (chave estrangeira) |
+| **Linhagem (*lineage*)** | Rastro de origem de cada tabela: de quais tabelas ela foi gerada |
+| **Quarentena** | Tabela onde ficam os registros que não puderam ser interpretados com segurança, preservados sem descarte |
 ---
 
 Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog + Delta Lake + PySpark/Spark SQL), organizado na arquitetura medalhão **Bronze → Silver → Gold**, a partir da base pública do **SES — Sistema de Estatísticas da SUSEP**.
