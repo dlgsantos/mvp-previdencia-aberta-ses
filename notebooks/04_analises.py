@@ -99,7 +99,7 @@ plt.tight_layout(); plt.show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q1:** *(preencher com os números obtidos acima)*
+# MAGIC **Interpretação Q1:** as contribuições de VGBL cresceram 2,5× entre 2014 e 2024 (R$ 71 bi → R$ 178 bi) e caíram 22% em 2025 (R$ 139 bi), enquanto os resgates subiram (R$ 119 bi → R$ 136 bi). O FLCR do VGBL caiu de R$ 59,0 bi para R$ 3,5 bi, com valores mensais negativos no 2º semestre de 2025. Em jan–jul/2026 o FLCR (R$ 8,0 bi) é o menor da série comparável. No PGBL o FLCR é pequeno e positivo em todos os anos, mas negativo em todo jan–jul: as contribuições se concentram em dezembro (dedução do IR).
 
 # COMMAND ----------
 
@@ -135,7 +135,7 @@ plt.tight_layout(); plt.show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q2:** *(preencher)*
+# MAGIC **Interpretação Q2:** a taxa de resgate do VGBL ficou em 10,1% em 2024 e em 2025, e em jan–jul/2026 é a menor da série comparável (5,1%). No PGBL ela é estável (5,3%–6,5%). Os resgates cresceram na mesma proporção do estoque. Logo, a queda do FLCR (Q1) vem da redução das contribuições, e não de uma saída proporcionalmente maior de recursos.
 
 # COMMAND ----------
 
@@ -194,7 +194,7 @@ FROM s WHERE pos <= 5 AND ano IN (2014, 2025) ORDER BY cod_produto, ano, pos
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q3:** *(preencher)*
+# MAGIC **Interpretação Q3:** o mercado desconcentrou nos dois produtos. No VGBL, o HHI caiu de 2.774 para 2.026 e a participação dos 5 maiores foi de 96% para 91%. No PGBL, o HHI caiu de 1.992 para 1.445 e a dos 5 maiores de 84% para 79%. No PGBL, o Itaú assumiu a liderança e Icatu e XP entraram entre os 5 maiores. No VGBL, a Caixa subiu para 3º.
 
 # COMMAND ----------
 
@@ -266,7 +266,7 @@ GROUP BY ALL ORDER BY nome_unidade, ano
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q4:** *(preencher)*
+# MAGIC **Interpretação Q4:** em 2025, XP (+R$ 17,0 bi), Banco Pactual (+R$ 7,8 bi) e Itaú (+R$ 7,5 bi) foram os maiores receptores líquidos de portabilidade. Icatu (−R$ 10,0 bi), Brasil (−R$ 9,9 bi), Sul América (−R$ 4,6 bi) e Bradesco (−R$ 3,6 bi) foram os maiores cedentes líquidos. Para XP e Banco Pactual, o saldo de portabilidade supera as próprias contribuições do ano. No mercado como um todo, o saldo é pequeno (+R$ 1,9 bi sobre R$ 67,8 bi portados).
 
 # COMMAND ----------
 
@@ -317,7 +317,7 @@ FROM (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q5:** *(preencher)*
+# MAGIC **Interpretação Q5:** das 19 unidades, 15 mudam de posição e 5 mudam de sinal quando a portabilidade é incluída. A XP passa de 18º no FLCR para 1º em captação líquida, a Icatu cai de 3º para 18º e a Caixa de 1º para 4º. O ranking de "quem cresce" depende da métrica.
 # MAGIC
 # MAGIC ## Discussão geral
-# MAGIC *(preencher após a execução: conectar Q1–Q5 ao problema central; limitações — valores nominais, VGBL sem UF, direção R/D baseada em fonte secundária, conciliação PGBL parcial)*
+# MAGIC 2014–2024 foi uma década de crescimento. Em 2025 houve uma ruptura na entrada de contribuições de VGBL, sem aumento proporcional dos resgates (taxa estável). A concentração do mercado caiu, e a portabilidade redistribui dezenas de bilhões por ano dos grandes grupos bancários para unidades como XP, Banco Pactual e Itaú. A queda de 2025 coincide temporalmente com a mudança do IOF sobre aportes em VGBL (Decretos 12.466 e 12.499/2025), mas nenhuma relação causal é afirmada. Limitações: valores nominais, VGBL sem abertura por UF, conciliação PGBL parcial e soma de portabilidade de mercado não exatamente simétrica. Discussão completa no README.
