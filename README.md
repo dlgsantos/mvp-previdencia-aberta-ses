@@ -150,7 +150,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 |---|---|---|---|
 | `Ses_Contrib_Benef.csv` | 28.185 | coenti, damesano, tipoProd, contrib, benef | Contribuições e benefícios por produto |
 | `Ses_vgbl_resgates.csv` | 19.682 | damesano, coenti, resg_total, resg_parcial, Resg_Pag_programado | Resgates VGBL |
-| `ses_pgbl_resgates.csv` | 18.016 | idem | Resgates PGBL |
+| `ses_pgbl_resgates.csv` | 18.016 | damesano, coenti, resg_total, resg_parcial, Resg_Pag_programado | Resgates PGBL |
 | `ses_transferenciasexternas.csv` | 17.746 | COENTI, DAMESANO, TIPOTRANSF, TIPOPLANO, VALOR, QUANTIDADE | Portabilidades externas |
 | `Ses_vgbl_fundos.csv` | 6.184 | coenti, damesano, fundos | PMBaC VGBL (fundos) |
 | `ses_pgbl_fundos.csv` | 7.122 | coenti, damesano, fundos | PMBaC PGBL (fundos) |
