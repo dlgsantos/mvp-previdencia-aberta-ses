@@ -1,0 +1,46 @@
+col_name,data_type,comment
+mes_ref,date,"Mês de referência (1º dia do mês), derivado de damesano (AAAAMM)."
+cod_empresa,string,"Código FIP da empresa na SUSEP (5 dígitos, texto)."
+cod_produto,string,Produto: VGBL ou PGBL.
+cod_grupo,string,"Código do grupo econômico (99999 = 'OUTROS GRUPOS', genérico; NAO_INFORMADO = sem histórico)."
+vl_contribuicao,"decimal(20,2)",Contribuições no mês (R$ nominais). Origem: contrib.
+vl_resgate,"decimal(20,2)",Resgates do projeto = resg_total + resg_parcial (R$ nominais).
+vl_resgate_pag_programado,"decimal(20,2)",Soma de Resg_Pag_programado (coluna não documentada pela SUSEP); fora de vl_resgate.
+vl_flcr,"decimal(20,2)",FLCR — fluxo líquido de contribuições e resgates = vl_contribuicao − vl_resgate.
+vl_portab_aceita,"decimal(20,2)","Portabilidade aceita/recebida (TIPOTRANSF = R), R$ nominais."
+vl_portab_cedida,"decimal(20,2)","Portabilidade cedida/enviada (TIPOTRANSF = D), R$ nominais."
+vl_portab_liquida,"decimal(20,2)",Saldo líquido de portabilidade = aceita − cedida.
+vl_captacao_liquida,"decimal(20,2)",Captação líquida (conceito de mercado) = vl_flcr + vl_portab_liquida.
+fl_tem_contribuicao,boolean,Verdadeiro se a chave existe em silver.contribuicoes.
+fl_tem_resgate,boolean,Verdadeiro se a chave existe em silver.resgates.
+fl_tem_portabilidade,boolean,Verdadeiro se a chave existe em silver.portabilidade.
+fl_contribuicao_negativa,boolean,Verdadeiro se a contribuição informada é negativa (estorno/ajuste). Mantida nos totais.
+fl_qtd_portab_suspeita,boolean,Verdadeiro se alguma linha de origem tem valor médio por portabilidade < R$ 100 (QUANTIDADE implausível).
+,,
+# Delta Statistics Columns,,
+Column Names,"vl_portab_aceita, fl_contribuicao_negativa, vl_flcr, fl_tem_portabilidade, fl_tem_resgate, cod_produto, vl_resgate_pag_programado, fl_qtd_portab_suspeita, vl_portab_liquida, cod_grupo, vl_portab_cedida, cod_empresa, vl_captacao_liquida, fl_tem_contribuicao, vl_contribuicao, mes_ref, vl_resgate",
+Column Selection Method,first-32,
+,,
+# Detailed Table Information,,
+Catalog,previdencia,
+Database,gold,
+Table,fato_fluxo_previdencia,
+Created Time,Sat Sep 26 18:30:29 UTC 2026,
+Last Access,UNKNOWN,
+Created By,Spark ,
+Statistics,"237211 bytes, 6664 rows",
+Type,MANAGED,
+Comment,"Fato de fluxos mensais por empresa e produto: contribuições, resgates, FLCR, portabilidade e captação líquida. Linhagem: silver.contribuicoes ⟗ silver.resgates ⟗ silver.portabilidade + ponte_empresa_grupo_mes; jan/2014–jul/2026.",
+Location,,
+Provider,delta,
+Owner,danilolgs98@gmail.com,
+Is_managed_location,true,
+Predictive Optimization,ENABLE (inherited from METASTORE metastore_aws_us_east_2),
+Table Properties,"[delta.enableDeletionVectors=true,delta.feature.appendOnly=supported,delta.feature.deletionVectors=supported,delta.feature.invariants=supported,delta.minReaderVersion=3,delta.minWriterVersion=7,delta.parquet.compression.codec=zstd,delta.parquet.format.version=2.12.0,delta.parquet.format.version.afe.internal=2.12.0,io.unitycatalog.tableId=0232d495-33c8-4900-bb9a-d8bee55acccd]",
+,,
+# Constraints,,
+fk_fato_fluxo_previdencia_cod_empresa,FOREIGN KEY (`cod_empresa`) REFERENCES `previdencia`.`gold`.`dim_empresa` (`cod_empresa`),
+fk_fato_fluxo_previdencia_mes_ref,FOREIGN KEY (`mes_ref`) REFERENCES `previdencia`.`gold`.`dim_tempo` (`mes_ref`),
+fk_fato_fluxo_previdencia_cod_grupo,FOREIGN KEY (`cod_grupo`) REFERENCES `previdencia`.`gold`.`dim_grupo` (`cod_grupo`),
+fk_fato_fluxo_previdencia_cod_produto,FOREIGN KEY (`cod_produto`) REFERENCES `previdencia`.`gold`.`dim_produto` (`cod_produto`),
+pk_fato_fluxo_previdencia,"PRIMARY KEY (`mes_ref`, `cod_empresa`, `cod_produto`)",

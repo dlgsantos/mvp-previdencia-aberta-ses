@@ -1,0 +1,60 @@
+camada,tabela,dimensao,regra,metrica,valor,esperado,status,acao,ts_execucao
+SILVER,bronze.*,Consistência,nome único por conceito,variantes do nome da coluna de empresa,3,1,ALERTA,padronizar para cod_empresa,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_cias,Completude,Cogrupo preenchido,% nulo/vazio,100.0,—,ALERTA,coluna 100% vazia excluída; grupo obtido de ses_grupos_economicos,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_cias,Completude,Nogrupo preenchido,% nulo/vazio,100.0,—,ALERTA,coluna 100% vazia excluída; grupo obtido de ses_grupos_economicos,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_cias,Consistência,encoding correto (sem caractere �),nomes corrompidos lendo como UTF-8,225,>0 (demonstração),INFO,ler como windows-1252,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_cias,Consistência,encoding correto (sem caractere �),nomes corrompidos lendo como windows-1252,0,0,OK,revisar charset,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_cias,Consistência,chave sem espaços,linhas com espaço em Coenti,769,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_contrib_benef,Consistência,formato numérico,% de valores de contrib com vírgula decimal,90.4,>0 (formato BR),INFO,"converter vírgula -> ponto e tipar DECIMAL(20,2)",2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_grupos_economicos,Consistência,chave sem espaços,linhas com espaço em damesano,3,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_pgbl_fundos,Consistência,chave sem espaços,linhas com espaço em damesano,7122,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_pgbl_fundos,Consistência,chave sem espaços,linhas com espaço em coenti,7122,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_pgbl_resgates,Consistência (schema × documentação),"colunas documentadas: damesano, coenti, resg_total, resg_parcial",colunas não documentadas,['resg_pag_programado'],[],ALERTA,manter resg_pag_programado em coluna própria e registrar no catálogo,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_pgbl_uf,Completude,NUMBENEF preenchido,% nulo/vazio,100.0,—,ALERTA,coluna 100% vazia: não utilizada,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_pgbl_uf,Completude,BENEFPAGO preenchido,% nulo/vazio,100.0,—,ALERTA,coluna 100% vazia: não utilizada,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_vgbl_fundos,Consistência,chave sem espaços,linhas com espaço em damesano,6184,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_vgbl_fundos,Consistência,chave sem espaços,linhas com espaço em coenti,6184,0,ALERTA,aplicar trim,2026-09-26T17:15:06.735Z
+SILVER,bronze.ses_vgbl_resgates,Consistência (schema × documentação),"colunas documentadas: damesano, coenti, resg_total, resg_parcial",colunas não documentadas,['resg_pag_programado'],[],ALERTA,manter resg_pag_programado em coluna própria e registrar no catálogo,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Consistência,AAAAMM válido,linhas com mês inválido,0,0,OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Consistência (domínio),"tipoProd ∈ {PGBL, VGBL, PrevTrad}",valores fora do domínio,0,0,OK,investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Escopo,somente VGBL e PGBL,linhas PrevTrad excluídas (decisão de escopo),15043,—,INFO,fora do escopo do MVP,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Integridade referencial,cod_empresa existe em silver.empresa,empresas órfãs,0,0,OK,incluir empresa desconhecida na dimensão / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Outliers,contribuição > 5x média 12m anterior e > R$ 50 mi,nº de empresa×mês atípicos,17,—,INFO,"manter (podem ser eventos reais: aportes, incorporações); inspecionar",2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Unicidade,"chave única ['cod_empresa', 'mes_ref', 'cod_produto']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Validade,contribuição >= 0,linhas negativas / soma (R$),2 / -61281051.35,0 (regra de negócio),ALERTA,manter (estornos legítimos no FIP) e sinalizar com fl_contribuicao_negativa,2026-09-26T17:15:06.735Z
+SILVER,silver.contribuicoes,Validade,valores numéricos,"não numéricos (contrib, benef)","{'contrib': 0, 'benef': 0}","{0, 0}",OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.dq_conciliacao_pgbl,Acurácia (conciliação entre fontes),CONTRIB_PGBL: contrib_benef x pgbl_uf,% de empresa×mês conciliados até 1%,87.8,alto (referência),ALERTA,não corrigir; usar contrib_benef/resgates como fonte oficial e reportar como limitação,2026-09-26T17:15:06.735Z
+SILVER,silver.dq_conciliacao_pgbl,Acurácia (conciliação entre fontes),RESGATE_PGBL: resgates x pgbl_uf,% de empresa×mês conciliados até 1%,77.4,alto (referência),ALERTA,não corrigir; usar contrib_benef/resgates como fonte oficial e reportar como limitação,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa,Consistência,cod_empresa com 5 dígitos,nº fora do padrão,0,0,OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa,Unicidade,chave única ['cod_empresa'],nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Completude,cod_grupo preenchido,linhas sem grupo,3,0,ALERTA,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Consistência,AAAAMM válido,linhas com mês inválido,3,0,ALERTA,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Consistência (temporal),grupo muda no tempo?,empresas com mais de um grupo no histórico,175,—,INFO,atribuição de grupo por empresa+mês (não pelo grupo atual),2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Integridade referencial,cod_empresa existe em silver.empresa,empresas órfãs,0,0,OK,incluir empresa desconhecida na dimensão / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Unicidade,"chave única ['cod_empresa', 'mes_ref']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.empresa_grupo_mensal,Unicidade,sem duplicatas exatas,linhas duplicadas removidas,0,0,OK,remover duplicata exata,2026-09-26T17:15:06.735Z
+SILVER,silver.pmbac,Completude,PMBaC > 0,empresa×mês com PMBaC = 0,131,—,INFO,manter e sinalizar,2026-09-26T17:15:06.735Z
+SILVER,silver.pmbac,Integridade,resgate (2014+) tem PMBaC no mesmo empresa×mês×produto,pares sem estoque / valor de resgate (R$),82 / 0.00,valor ≈ 0,OK,PMBaC compatível com a taxa de resgate,2026-09-26T17:15:06.735Z
+SILVER,silver.pmbac,Integridade referencial,cod_empresa existe em silver.empresa,empresas órfãs,0,0,OK,incluir empresa desconhecida na dimensão / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.pmbac,Unicidade,"chave única ['cod_empresa', 'mes_ref', 'cod_produto']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.pmbac,Validade,PMBaC >= 0,linhas negativas,0,0,OK,manter e sinalizar,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Acurácia,valor médio por portabilidade >= R$ 100,linhas com quantidade implausível,22,0,ALERTA,sinalizar; QUANTIDADE não é usada nas análises,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Acurácia (coerência),Σ aceita ≈ Σ cedida no mercado (2014–2025),maior |diferença %| anual,15.59,pequena (<15%),ALERTA,diferença residual = transferências com entidades fora do escopo (hipótese),2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Completude,TIPOPLANO preenchido,linhas sem produto / valor (R$),45 / 254600189.01,0,ALERTA,fora do escopo (produto não identificado),2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Consistência (domínio),"TIPOTRANSF ∈ ['R', 'D']",linhas fora do domínio / valor (R$),3 / 6528492.43,0,ALERTA,"quarentena, sem interpretação",2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Escopo,"TIPOPLANO ∈ {VGBL, PGBL}",% do valor de portabilidade dentro do escopo,99.18,—,INFO,"demais modalidades (PAGP, PRGP, VAGP, VRGP, Previdência, vazio...) fora do escopo",2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Integridade referencial,cod_empresa existe em silver.empresa,empresas órfãs,0,0,OK,incluir empresa desconhecida na dimensão / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Unicidade,"chave única ['cod_empresa', 'mes_ref', 'cod_produto']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Validade,valor >= 0,linhas negativas,5,0,ALERTA,manter e sinalizar,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade,Validade,VALOR numérico,não numéricos,0,0,OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.portabilidade (origem),Unicidade,"chave única ['cod_empresa', 'mes_ref', 'tipotransf', 'tipoplano']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Acurácia,remoção de duplicatas não altera totais,soma removida (R$),0.00,0,OK,abortar e investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Consistência,AAAAMM válido,linhas com mês inválido,0,0,OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Consistência (temporal),grão constante ao longo do tempo,primeiro mês com >1 linha por empresa×mês (após remover duplicatas),201312,—,ALERTA,agregar por soma para empresa×mês×produto,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Consistência (temporal),continuidade PGBL em 12/2013,|variação % em 12/2013| vs p90 histórico,5.3% vs 64.2%,<= p90,OK,"se ALERTA, investigar antes da Gold",2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Consistência (temporal),continuidade VGBL em 12/2013,|variação % em 12/2013| vs p90 histórico,13.8% vs 16.5%,<= p90,OK,"se ALERTA, investigar antes da Gold",2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Integridade referencial,cod_empresa existe em silver.empresa,empresas órfãs,0,0,OK,incluir empresa desconhecida na dimensão / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Unicidade,duplicatas exatas,linhas duplicadas removidas,15029,—,ALERTA,remover somente se a soma removida for zero,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Unicidade,"chave única ['cod_empresa', 'mes_ref', 'cod_produto']",nº de chaves duplicadas,0,0,OK,falhar o pipeline / investigar,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Validade,valores numéricos,não numéricos,"{'resg_total': 0, 'resg_parcial': 0, 'resg_pag_programado': 0}","{0,0,0}",OK,quarentena,2026-09-26T17:15:06.735Z
+SILVER,silver.resgates,Validade,resgate >= 0,empresa×mês com resgate negativo,0,0,OK,manter e sinalizar,2026-09-26T17:15:06.735Z
