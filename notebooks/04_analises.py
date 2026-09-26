@@ -200,7 +200,7 @@ FROM s WHERE pos <= 5 AND ano IN (2014, 2025) ORDER BY cod_produto, ano, pos
 
 # MAGIC %md
 # MAGIC ## Q4. Qual o saldo líquido de portabilidade por grupo econômico e qual o seu tamanho em relação às contribuições do grupo?
-# MAGIC Saldo líquido de portabilidade = aceita − cedida. No agregado do mercado ele tende a zero (transferência entre entidades); por isso é analisado **por grupo**.
+# MAGIC Saldo líquido de portabilidade = aceita − cedida. No agregado do mercado ele tende a zero (transferência entre entidades); por isso é analisado **por unidade econômica** — grupo econômico vigente no mês, ou a própria empresa quando ela está no código genérico 99999 ("OUTROS GRUPOS"), mesma regra da Q3.
 
 # COMMAND ----------
 
@@ -209,8 +209,14 @@ CREATE OR REPLACE TEMP VIEW grupo_periodo AS
 SELECT CASE WHEN t.fl_ano_completo THEN CAST(t.ano AS STRING) END AS periodo_ano,
        CASE WHEN t.fl_periodo_ytd THEN CONCAT(CAST(t.ano AS STRING), '_JAN_JUL') END AS periodo_ytd,
        f.cod_produto, f.cod_grupo, g.nome_grupo,
+       -- mesma unidade econômica da Q3: empresas do grupo genérico 99999 (ou sem grupo) contam como unidade própria
+       CASE WHEN f.cod_grupo IN ('99999', 'NAO_INFORMADO') THEN CONCAT('EMP_', f.cod_empresa) ELSE f.cod_grupo END AS unidade,
+       CASE WHEN f.cod_grupo IN ('99999', 'NAO_INFORMADO') THEN CONCAT(e.nome_empresa, ' (sem grupo)') ELSE g.nome_grupo END AS nome_unidade,
        f.vl_contribuicao, f.vl_resgate, f.vl_flcr, f.vl_portab_aceita, f.vl_portab_cedida, f.vl_portab_liquida, f.vl_captacao_liquida
-FROM fato_fluxo_previdencia f JOIN dim_tempo t ON t.mes_ref = f.mes_ref JOIN dim_grupo g ON g.cod_grupo = f.cod_grupo
+FROM fato_fluxo_previdencia f
+JOIN dim_tempo t ON t.mes_ref = f.mes_ref
+JOIN dim_grupo g ON g.cod_grupo = f.cod_grupo
+JOIN dim_empresa e ON e.cod_empresa = f.cod_empresa
 """)
 
 # Verificação: no total do mercado o saldo líquido de portabilidade é pequeno frente ao volume portado
@@ -223,14 +229,14 @@ FROM grupo_periodo WHERE periodo_ano IS NOT NULL GROUP BY periodo_ano ORDER BY a
 # COMMAND ----------
 
 q4 = spark.sql("""
-SELECT nome_grupo, cod_grupo,
+SELECT nome_unidade, unidade,
        ROUND(SUM(vl_portab_aceita)/1e9, 2) AS aceita_bi, ROUND(SUM(vl_portab_cedida)/1e9, 2) AS cedida_bi,
        ROUND(SUM(vl_portab_liquida)/1e9, 2) AS saldo_liquido_portab_bi,
        ROUND(SUM(vl_contribuicao)/1e9, 2) AS contribuicoes_bi,
        ROUND(100 * SUM(vl_portab_liquida) / NULLIF(SUM(vl_contribuicao), 0), 1) AS saldo_portab_pct_contrib
 FROM grupo_periodo
-WHERE periodo_ano = '2025' AND cod_grupo NOT IN ('99999', 'NAO_INFORMADO')
-GROUP BY nome_grupo, cod_grupo
+WHERE periodo_ano = '2025'
+GROUP BY nome_unidade, unidade
 HAVING SUM(vl_portab_aceita) + SUM(vl_portab_cedida) > 0
 ORDER BY saldo_liquido_portab_bi DESC
 """)
@@ -238,9 +244,9 @@ display(q4)
 pdf = q4.toPandas()
 pdf = pdf.reindex(pdf.saldo_liquido_portab_bi.abs().sort_values(ascending=False).index).head(15).sort_values("saldo_liquido_portab_bi")
 fig, ax = plt.subplots(figsize=(10, 6))
-ax.barh(pdf.nome_grupo, pdf.saldo_liquido_portab_bi, color=["#2e7d32" if v > 0 else "#c62828" for v in pdf.saldo_liquido_portab_bi])
+ax.barh(pdf.nome_unidade, pdf.saldo_liquido_portab_bi, color=["#2e7d32" if v > 0 else "#c62828" for v in pdf.saldo_liquido_portab_bi])
 ax.axvline(0, color="grey", lw=0.8)
-ax.set_title("Saldo líquido de portabilidade por grupo econômico, 2025 (R$ bi, VGBL+PGBL)\n15 maiores em valor absoluto")
+ax.set_title("Saldo líquido de portabilidade por unidade econômica, 2025 (R$ bi, VGBL+PGBL)\n15 maiores em valor absoluto")
 plt.tight_layout(); plt.show()
 
 # COMMAND ----------
@@ -250,11 +256,11 @@ plt.tight_layout(); plt.show()
 # COMMAND ----------
 
 display(spark.sql("""
-WITH top AS (SELECT cod_grupo FROM grupo_periodo WHERE periodo_ano BETWEEN '2021' AND '2025' AND cod_grupo NOT IN ('99999','NAO_INFORMADO')
-             GROUP BY cod_grupo ORDER BY SUM(vl_portab_aceita + vl_portab_cedida) DESC LIMIT 8)
-SELECT periodo_ano AS ano, nome_grupo, ROUND(SUM(vl_portab_liquida)/1e9, 2) AS saldo_liquido_portab_bi
-FROM grupo_periodo WHERE periodo_ano BETWEEN '2014' AND '2025' AND cod_grupo IN (SELECT cod_grupo FROM top)
-GROUP BY ALL ORDER BY nome_grupo, ano
+WITH top AS (SELECT unidade FROM grupo_periodo WHERE periodo_ano BETWEEN '2021' AND '2025'
+             GROUP BY unidade ORDER BY SUM(vl_portab_aceita + vl_portab_cedida) DESC LIMIT 8)
+SELECT periodo_ano AS ano, nome_unidade, ROUND(SUM(vl_portab_liquida)/1e9, 2) AS saldo_liquido_portab_bi
+FROM grupo_periodo WHERE periodo_ano BETWEEN '2014' AND '2025' AND unidade IN (SELECT unidade FROM top)
+GROUP BY ALL ORDER BY nome_unidade, ano
 """))
 
 # COMMAND ----------
@@ -272,15 +278,15 @@ GROUP BY ALL ORDER BY nome_grupo, ano
 
 q5 = spark.sql("""
 WITH g AS (
-  SELECT nome_grupo, SUM(vl_flcr) AS flcr, SUM(vl_portab_liquida) AS portab, SUM(vl_captacao_liquida) AS captacao, SUM(vl_contribuicao) AS contrib
-  FROM grupo_periodo WHERE periodo_ano = '2025' AND cod_grupo NOT IN ('99999', 'NAO_INFORMADO')
-  GROUP BY nome_grupo HAVING SUM(vl_contribuicao) > 0)
-SELECT nome_grupo,
+  SELECT nome_unidade, SUM(vl_flcr) AS flcr, SUM(vl_portab_liquida) AS portab, SUM(vl_captacao_liquida) AS captacao, SUM(vl_contribuicao) AS contrib
+  FROM grupo_periodo WHERE periodo_ano = '2025'
+  GROUP BY nome_unidade HAVING SUM(vl_contribuicao) > 0)
+SELECT nome_unidade,
        ROUND(flcr/1e9, 2) AS flcr_bi, ROUND(portab/1e9, 2) AS saldo_portab_bi, ROUND(captacao/1e9, 2) AS captacao_liquida_bi,
        RANK() OVER (ORDER BY flcr DESC)     AS posicao_flcr,
        RANK() OVER (ORDER BY captacao DESC) AS posicao_captacao,
        RANK() OVER (ORDER BY flcr DESC) - RANK() OVER (ORDER BY captacao DESC) AS variacao_posicao,
-       SIGN(flcr) <> SIGN(captacao) AS muda_de_sinal
+       SIGN(flcr) * SIGN(captacao) < 0 AS muda_de_sinal   -- só conta troca real de sinal (zeros não contam)
 FROM g ORDER BY posicao_captacao
 """)
 display(q5)
@@ -292,8 +298,8 @@ fig, ax = plt.subplots(figsize=(11, 5.5))
 y = range(len(pdf))
 ax.barh([i + 0.2 for i in y], pdf.flcr_bi, height=0.4, label="FLCR", color="#9aa5b1")
 ax.barh([i - 0.2 for i in y], pdf.captacao_liquida_bi, height=0.4, label="Captação líquida (FLCR + portabilidade)", color="#1f5aa6")
-ax.set_yticks(list(y)); ax.set_yticklabels(pdf.nome_grupo); ax.invert_yaxis(); ax.axvline(0, color="grey", lw=0.8)
-ax.set_title("FLCR × captação líquida por grupo, 2025 (R$ bi, VGBL+PGBL) — 12 primeiros pela captação líquida"); ax.legend()
+ax.set_yticks(list(y)); ax.set_yticklabels(pdf.nome_unidade); ax.invert_yaxis(); ax.axvline(0, color="grey", lw=0.8)
+ax.set_title("FLCR × captação líquida por unidade econômica, 2025 (R$ bi, VGBL+PGBL) — 12 primeiros pela captação líquida"); ax.legend()
 plt.tight_layout(); plt.show()
 
 # COMMAND ----------
@@ -303,9 +309,9 @@ SELECT COUNT(*) AS grupos,
        SUM(CASE WHEN variacao_posicao <> 0 THEN 1 ELSE 0 END) AS grupos_que_mudam_de_posicao,
        SUM(CASE WHEN muda_de_sinal THEN 1 ELSE 0 END) AS grupos_que_mudam_de_sinal
 FROM (
-  SELECT RANK() OVER (ORDER BY flcr DESC) - RANK() OVER (ORDER BY captacao DESC) AS variacao_posicao, SIGN(flcr) <> SIGN(captacao) AS muda_de_sinal
-  FROM (SELECT nome_grupo, SUM(vl_flcr) flcr, SUM(vl_captacao_liquida) captacao FROM grupo_periodo
-        WHERE periodo_ano = '2025' AND cod_grupo NOT IN ('99999','NAO_INFORMADO') GROUP BY nome_grupo HAVING SUM(vl_contribuicao) > 0))
+  SELECT RANK() OVER (ORDER BY flcr DESC) - RANK() OVER (ORDER BY captacao DESC) AS variacao_posicao, SIGN(flcr) * SIGN(captacao) < 0 AS muda_de_sinal
+  FROM (SELECT nome_unidade, SUM(vl_flcr) flcr, SUM(vl_captacao_liquida) captacao FROM grupo_periodo
+        WHERE periodo_ano = '2025' GROUP BY nome_unidade HAVING SUM(vl_contribuicao) > 0))
 """))
 
 # COMMAND ----------
