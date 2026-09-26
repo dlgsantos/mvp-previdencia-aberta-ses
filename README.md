@@ -1,5 +1,27 @@
-# Fluxos da previdência complementar aberta no Brasil (2014–2026)
-### Contribuições, resgates e portabilidade de VGBL e PGBL por grupo econômico — MVP de Engenharia de Dados (PUC-Rio)
+<div align="center">
+
+# Fluxos da Previdência Complementar Aberta no Brasil (2014–2026)
+
+### Contribuições, resgates e portabilidade de VGBL e PGBL por grupo econômico
+
+**MVP — Construção de um Pipeline de Dados na Nuvem**
+
+Disciplina: Engenharia de Dados  
+Pós-Graduação em Ciência de Dados e Analytics  
+Pontifícia Universidade Católica do Rio de Janeiro (PUC-Rio)
+
+**Aluno(a):** SEU NOME COMPLETO
+
+Setembro de 2026
+
+---
+
+*Plataforma: Databricks Free Edition (Unity Catalog · Delta Lake · PySpark / Spark SQL)*  
+*Fonte de dados: SUSEP — Sistema de Estatísticas da SUSEP (SES)*
+
+</div>
+
+---
 
 Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog + Delta Lake + PySpark/Spark SQL), organizado na arquitetura medalhão **Bronze → Silver → Gold**, a partir da base pública do **SES — Sistema de Estatísticas da SUSEP**.
 
@@ -576,4 +598,3 @@ As principais ressalvas são os valores nominais e a portabilidade de mercado n�
 - Databricks — Medallion architecture; Unity Catalog (constraints, comments e data lineage): https://docs.databricks.com
 
 ---
-*Autor: (seu nome) · Pós-graduação em Ciência de Dados e Analytics — PUC-Rio · Disciplina de Engenharia de Dados*
