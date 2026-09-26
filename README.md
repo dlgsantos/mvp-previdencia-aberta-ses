@@ -204,4 +204,4 @@ Portanto **R = aceita** e **D = cedida**. O resultado coincide com a metodologia
 - Análise de eventos regulatórios (ex.: IOF sobre VGBL em 2025) com metodologia causal apropriada.
 
 ---
-*Autor: (seu nome) · Pós-graduação em Ciência de Dados e Analytics — PUC-Rio · Disciplina de Engenharia de Dados*
+*Autor: Danilo Leandro Gomes dos Santos · Pós-graduação em Ciência de Dados e Analytics — PUC-Rio · Disciplina de Engenharia de Dados*
