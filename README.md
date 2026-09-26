@@ -127,7 +127,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 | Q5 | Em que medida o resultado e a posição dos grupos mudam quando se passa do FLCR para a captação líquida (FLCR + saldo líquido de portabilidade)? |
 
 ### Definições das métricas
-| Métrica | Fórmula | Origem | Grão | Limitações |
+| Métrica | Fórmula | Origem | Grão (granularidade) | Limitações |
 |---|---|---|---|---|
 | Contribuições | Σ `contrib` (`tipoProd` ∈ {VGBL, PGBL}) | `Ses_Contrib_Benef` | empresa × mês × produto | Valores nominais |
 | Resgates | Σ (`resg_total` + `resg_parcial`) após remover duplicatas exatas e somar as sub-linhas | `Ses_vgbl_resgates`, `ses_pgbl_resgates` | empresa × mês × produto | Sub-linhas pós-12/2013 não identificadas; `Resg_Pag_programado` (não documentado) fora da soma |
