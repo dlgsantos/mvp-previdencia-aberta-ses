@@ -67,7 +67,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 ### Perguntas de negócio
 | # | Pergunta |
 |---|---|
-| Q1 | Como evoluíram contribuições, resgates e FLCR de VGBL e PGBL de 2014 a 2025, e como jan–jul/2026 se compara a jan–jul dos anos anteriores? |
+| Q1 | Como evoluíram contribuições, resgates e FLCR (contribuições − resgates) de VGBL e PGBL de 2014 a 2025, e como jan–jul/2026 se compara a jan–jul dos anos anteriores? |
 | Q2 | Como evoluiu a taxa de resgate (resgates ÷ PMBaC média) de VGBL e PGBL? |
 | Q3 | Qual o grau de concentração das contribuições entre grupos econômicos (participação dos 5 maiores e HHI), por produto e ano? |
 | Q4 | Qual o saldo líquido de portabilidade por grupo econômico (unidade econômica) e qual a sua magnitude relativa às contribuições? |
