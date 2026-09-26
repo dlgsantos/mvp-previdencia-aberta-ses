@@ -89,7 +89,7 @@ Execução: sequencial, 01 → 02 → 03 → 04, no Databricks (catálogo `previ
 
 ---
 
-## 1. Contexto de Negócios e Perguntas (Etapa 2 e 4.1)
+## 1. Contexto de Negócios e Perguntas
 
 ### Contexto
 A previdência complementar aberta reúne planos oferecidos por seguradoras e entidades abertas de previdência (EAPP), supervisionadas pela SUSEP. Os dois produtos dominantes são o **VGBL** (seguro de pessoas com cobertura por sobrevivência) e o **PGBL** (plano de previdência). Juntos, eles acumulam da ordem de R$ 1,8 trilhão em provisões e movimentam centenas de bilhões de reais por ano em contribuições, resgates e portabilidades.
@@ -162,7 +162,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 
 ---
 
-## 2. Carga dos Dados (Etapa 4.2)
+## 2. Carga dos Dados
 
 1. Download manual do `BaseCompleta.zip` na página do SES, em 26/09/2026, e descompactação local. O ZIP contém 40 CSVs. **9 foram selecionados** para o escopo.
 2. Upload dos 9 CSVs para o **Volume do Unity Catalog** `/Volumes/previdencia/bronze/raw/ses/` pela interface do Databricks. O Free Edition restringe o acesso de saída à internet, e o upload para Volume é o caminho documentado pela plataforma.
@@ -180,7 +180,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 
 ---
 
-## 3. Modelagem e Catálogo de Dados (Etapa 4.3)
+## 3. Modelagem e Catálogo de Dados
 
 ### 3.1 Modelo — esquema estrela com associação temporal de grupo
 ```
@@ -334,7 +334,7 @@ O catálogo foi construído em três formas complementares:
 
 ---
 
-## 4. Pipeline de Dados (Etapa 4.4)
+## 4. Pipeline de Dados
 
 O pipeline foi organizado em **quatro notebooks**, executados em sequência no Databricks (computação *serverless*). Cada um lê apenas as tabelas da camada anterior e grava tabelas **Delta** gerenciadas pelo Unity Catalog, no catálogo `previdencia`. Todos os notebooks são idempotentes (sobrescrevem as tabelas da sua camada) e podem ser reexecutados do início.
 
@@ -359,7 +359,7 @@ O pipeline foi organizado em **quatro notebooks**, executados em sequência no D
 
 ---
 
-## 5. Qualidade de Dados (Etapa 4.5)
+## 5. Qualidade de Dados
 
 A qualidade foi tratada como parte do pipeline. Cada problema foi **diagnosticado com evidência antes de ser tratado**. Nenhum valor foi alterado silenciosamente: os registros não interpretáveis vão para `silver.quarentena`, e os valores atípicos legítimos são **mantidos e sinalizados** com flags.
 
@@ -445,7 +445,7 @@ Portanto **R = aceita** e **D = cedida**. Os códigos `r` e `P`, que não aparec
 
 ---
 
-## 6. Análise de Dados (Etapa 4.5)
+## 6. Análise de Dados
 
 Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](notebooks/04_analises.py), executadas sobre a camada Gold.
 
