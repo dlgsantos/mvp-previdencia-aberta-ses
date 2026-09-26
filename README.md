@@ -131,11 +131,11 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 |---|---|---|---|---|
 | Contribuições | Σ `contrib` (`tipoProd` ∈ {VGBL, PGBL}) | `Ses_Contrib_Benef` | empresa × mês × produto | Valores nominais |
 | Resgates | Σ (`resg_total` + `resg_parcial`) após remover duplicatas exatas e somar as sub-linhas | `Ses_vgbl_resgates`, `ses_pgbl_resgates` | empresa × mês × produto | Sub-linhas pós-12/2013 não identificadas; `Resg_Pag_programado` (não documentado) fora da soma |
-| **FLCR** (fluxo líquido de contribuições e resgates) | Contribuições − Resgates | `Ses_Contrib_Benef` (contribuições); `Ses_vgbl_resgates`, `ses_pgbl_resgates` (resgates) | agregável | Não inclui portabilidade, benefícios, rentabilidade; não é variação da reserva |
+| **FLCR** (fluxo líquido de contribuições e resgates) | Contribuições − Resgates | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates` | agregável | Não inclui portabilidade, benefícios, rentabilidade; não é variação da reserva |
 | **Saldo líquido de portabilidade** | Aceita (`TIPOTRANSF`=R) − Cedida (`TIPOTRANSF`=D) | `ses_transferenciasexternas` (`TIPOPLANO` ∈ {VGBL, PGBL}) | empresa/grupo × produto × período | Direção R/D confirmada no SES online; tende a ~0 no agregado do mercado |
 | **Captação líquida** | FLCR + Saldo líquido de portabilidade | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates`; `ses_transferenciasexternas` | empresa/grupo × período | Conceito de mercado (relatórios baseados no SES), não definição normativa; exclui benefícios |
-| **Taxa de resgate** | Σ resgates do período ÷ média dos saldos mensais de PMBaC |	`Ses_vgbl_resgates`, `ses_pgbl_resgates` (resgates); `Ses_vgbl_fundos`, `ses_pgbl_fundos` (PMBaC)| produto × ano | Denominador afetado por rentabilidade e portabilidade; 2026 só jan–jul |
-| **HHI** | Σ (participação × 100)² das contribuições | 	`Ses_Contrib_Benef` (contribuições); `Ses_grupos_economicos` (grupo econômico vigente no mês); `Ses_cias` (nome da empresa, para as sem grupo) | produto × ano | Empresas do grupo 99999 ("outros") ou sem grupo contam como unidades próprias |
+| **Taxa de resgate** | Σ resgates do período ÷ média dos saldos mensais de PMBaC |	`Ses_vgbl_resgates`, `ses_pgbl_resgates` ; `Ses_vgbl_fundos`, `ses_pgbl_fundos`| produto × ano | Denominador afetado por rentabilidade e portabilidade; 2026 só jan–jul |
+| **HHI** | Σ (participação × 100)² das contribuições | 	`Ses_Contrib_Benef`; `Ses_grupos_economicos` ; `Ses_cias` | produto × ano | Empresas do grupo 99999 ("outros") ou sem grupo contam como unidades próprias |
 
 **Unidade econômica (Q3, Q4, Q5):** o grupo econômico vigente no mês. Quando a empresa está no código genérico 99999 ("OUTROS GRUPOS") da SUSEP, que não é um grupo real, a própria empresa é a unidade, identificada como "(sem grupo)".
 
