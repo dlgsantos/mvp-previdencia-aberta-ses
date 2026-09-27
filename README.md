@@ -153,7 +153,7 @@ O grão de todas as métricas é empresa × mês × produto, agregável por grup
 | Tabela | Tipo | Grão | PK | FKs | Linhas |
 |---|---|---|---|---|---|
 | `fato_fluxo_previdencia` | fato de fluxos (mensal) | mês × empresa × produto | mes_ref, cod_empresa, cod_produto | tempo, empresa, produto, grupo | 6.664 |
-| `fato_pmbac` | fato *snapshot* (estoque de fim de mês) | mês × empresa × produto | mes_ref, cod_empresa, cod_produto | tempo, empresa, produto, grupo | — |
+| `fato_pmbac` | fato *snapshot* (estoque de fim de mês) | mês × empresa × produto | mes_ref, cod_empresa, cod_produto | tempo, empresa, produto, grupo | 6.632 |
 | `ponte_empresa_grupo_mes` | associação temporal | empresa × mês | cod_empresa, mes_ref | empresa, grupo, tempo | 3.732 |
 | `dim_tempo` | dimensão | mês (jan/2014–jul/2026) | mes_ref | — | 151 |
 | `dim_produto` | dimensão | produto | cod_produto | — | 2 |
