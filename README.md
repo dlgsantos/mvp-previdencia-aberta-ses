@@ -505,7 +505,7 @@ As respostas se apoiam nos 83 testes executados, sem ocorrências classificadas 
 
 ## 7. Autoavaliação
 
-O MVP atingiu o objetivo de construir um pipeline em nuvem que integra e analisa os fluxos de VGBL e PGBL a partir do SES. A arquitetura em camadas preservou os dados originais, tornou o tratamento de qualidade rastreável e entregou uma camada modelada capaz de responder às cinco perguntas.
+O MVP atingiu o objetivo de construir um pipeline em nuvem que integra e analisa os fluxos de VGBL e PGBL a partir do SES. A escolha do tema também teve relação com minha experiência profissional na Icatu Seguros, o que despertou meu interesse em explorar dados públicos do setor de previdência complementar aberta sob a perspectiva de Engenharia de Dados. A arquitetura em camadas preservou os dados originais, tornou o tratamento de qualidade rastreável e entregou uma camada modelada capaz de responder às cinco perguntas.
 
 O principal aprendizado foi que a dificuldade não estava no volume, e sim na interpretação e integração dos dados. Os desafios que mais exigiram decisões foram:
 - **Granularidade dos resgates:** a partir de 12/2013 surgiram várias linhas por empresa e mês sem coluna que as diferencie, e foi preciso separar duplicatas exatas de sub-linhas legítimas.
