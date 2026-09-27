@@ -323,7 +323,7 @@ Exemplo de transformação documentada: Uni `ses_vgbl_resgates` e `ses_pgbl_resg
 
 ## 5. Qualidade de Dados
 
-Cada problema foi diagnosticado com evidência antes de ser tratado, e nenhum valor foi corrigido silenciosamente: registros que não puderam ser interpretados com segurança foram para `silver.quarentena`, e valores atípicos legítimos foram mantidos com *flags*. Os testes ficam em `silver.dq_resultados`; na Silver foram 59, com 27 OK, 25 ALERTA (problema real da fonte, tratado e documentado), 7 INFO e nenhuma FALHA ([`dq_resultados_silver.csv`](docs/evidencias/dq_resultados_silver.csv)).
+Cada problema foi diagnosticado com evidência antes de ser tratado, e nenhum valor foi corrigido silenciosamente: registros que não puderam ser interpretados com segurança foram para `silver.quarentena` ([`quarentena_silver.csv`](docs/evidencias/quarentena_silver.csv)), e valores atípicos legítimos foram mantidos com *flags*. Os testes ficam em `silver.dq_resultados`; na Silver foram 59, com 27 OK, 25 ALERTA (problema real da fonte, tratado e documentado), 7 INFO e nenhuma FALHA ([`dq_resultados_silver.csv`](docs/evidencias/dq_resultados_silver.csv)).
 
 ### 5.1 Problemas encontrados e tratamento
 Versão com dimensão de qualidade, evidência completa e justificativa: [`docs/qualidade_detalhada.md`](docs/qualidade_detalhada.md).
