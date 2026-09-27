@@ -592,11 +592,8 @@ O problema central era a falta de uma base integrada e auditável que permitisse
 3. **A estrutura competitiva está mudando.** A concentração caiu (Q3), e a portabilidade (Q4) redistribui dezenas de bilhões por ano entre as unidades econômicas; em 2025, XP, Banco Pactual e Itaú apresentaram saldos líquidos positivos relevantes, enquanto Brasil, Bradesco, Sul América e Icatu apresentaram saldos líquidos negativos.”
 4. **A escolha da métrica muda as conclusões** (Q5). Sem separar FLCR e portabilidade, o maior receptor de recursos do mercado em 2025 (XP) apareceria com resultado negativo.
 
-**Contexto regulatório de 2025, com as devidas separações**
-- **Dado (SES):** as contribuições de VGBL caíram de R$ 178,3 bi (2024) para R$ 139,3 bi (2025), e o FLCR mensal ficou negativo em vários meses do 2º semestre de 2025.
-- **Contexto externo:** o Decreto nº 12.466/2025 (22/05/2025) instituiu IOF sobre aportes em seguros com cobertura por sobrevivência (VGBL). O Decreto nº 12.499/2025 (11/06/2025) fixou 5% sobre aportes acima de R$ 300 mil por seguradora em 2025 e de R$ 600 mil por ano a partir de 2026. Houve suspensão pelo Decreto Legislativo nº 176/2025 (27/06/2025) e restabelecimento cautelar pelo STF em 16/07/2025.
-- **Interpretação:** a queda das contribuições de VGBL **coincide temporalmente** com essa mudança tributária.
-- **Causalidade: não é afirmada.** O trabalho não controla juros, renda, comportamento de portabilidade nem outros fatores. Estimar esse efeito exigiria metodologia econométrica, fora do escopo deste MVP de Engenharia de Dados.
+**Contexto regulatório de 2025**
+As contribuições de VGBL caíram de R$ 178,3 bi em 2024 para R$ 139,3 bi em 2025. No mesmo período, ocorreram mudanças na tributação de IOF sobre determinados aportes em VGBL. A coincidência temporal é relevante como contexto, mas não permite afirmar uma relação causal, cuja investigação está fora do escopo deste MVP de Engenharia de Dados.
 
 **Qualidade e confiabilidade das respostas.** As respostas se apoiam em uma base auditada:
 - 59 testes na Silver e 24 na Gold, com 0 falhas;
@@ -610,35 +607,23 @@ As principais ressalvas são os valores nominais e a portabilidade de mercado n�
 
 ## 7. Autoavaliação
 
-**Objetivos atingidos.** Os cinco objetivos específicos foram cumpridos, e **as cinco perguntas de negócio foram respondidas** com dados da camada Gold:
-1. ingestão dos 9 arquivos preservando o original, com metadados e teste de contagem (9/9);
-2. diagnóstico e tratamento documentado de 19 problemas de qualidade reais, sem alteração silenciosa de valores (quarentena e *flags*);
-3. integração de contribuições, resgates, portabilidade, estoque e grupo econômico com atribuição temporal;
-4. esquema estrela com PK/FK no Unity Catalog, catálogo com domínio calculado a partir dos dados e linhagem automática;
-5. análises em Spark SQL.
+O MVP atingiu seu objetivo principal de construir um pipeline de dados em nuvem capaz de integrar e analisar os fluxos de VGBL e PGBL a partir dos dados do SES/SUSEP. A arquitetura Bronze → Silver → Gold permitiu preservar os dados originais, tratar problemas de qualidade de forma rastreável e disponibilizar uma camada modelada para responder às cinco perguntas de negócio.
 
-**Principais dificuldades**
-- **Granularidade oculta.** A mudança de 1 para até 3 linhas por chave em 12/2013, sem coluna identificadora, só foi percebida perfilando os dados. Uma deduplicação ingênua teria apagado resgates legítimos. A solução foi separar duplicatas exatas (removidas só após provar soma zero) de sub-linhas (somadas) e validar com um teste de continuidade.
-- **Domínios não documentados.** A documentação do SES diz apenas "Aceita ou Cedida" para `TIPOTRANSF`. A direção R/D teve de ser confirmada na consulta oficial do SES online, e os códigos `r` e `P` ficaram em quarentena.
-- **Unidade econômica.** Na primeira execução, as empresas do grupo genérico 99999 foram excluídas das perguntas Q4 e Q5, o que deixava de fora o maior receptor de portabilidade do mercado (XP, +R$ 17 bi). O erro foi identificado na revisão dos resultados e corrigido para usar a mesma regra da Q3 (a empresa como unidade própria), o que mostra a importância de validar os resultados contra o conhecimento do negócio.
-- **Ambiente.** O Databricks Free Edition restringe o acesso à internet, então a ingestão foi feita por upload manual para Volume. O prazo curto também exigiu reduzir o escopo (tradicional, IPCA e UF ficaram de fora).
+Um dos principais aprendizados do projeto foi perceber que a maior dificuldade não estava no volume dos dados, mas na sua interpretação e integração. A mudança de granularidade dos arquivos de resgates, os domínios não documentados de portabilidade e as alterações de grupo econômico ao longo do tempo exigiram decisões que não poderiam ser resolvidas apenas com transformações automáticas.
 
-**Limitações**
-- Valores **nominais**: as comparações de longo prazo incluem o efeito da inflação.
-- **VGBL não tem abertura por UF** nas tabelas de previdência do SES, então a análise geográfica ficou fora do escopo.
-- Conciliação PGBL entre fontes parcial: 86–88% nas contribuições e 71–77% nos resgates.
-- Soma de mercado da portabilidade não exatamente simétrica (diferença residual atribuída, como hipótese, a fluxos com entidades fora do escopo).
-- O limiar de quantidade implausível (R$ 100 por portabilidade) é heurístico.
-- **Não há inferência causal**: a associação com o IOF de 2025 é apenas temporal.
+Entre os principais desafios, destacam-se:
 
-### Trabalhos futuros
-- Correção monetária pelo IPCA (BCB/SGS 433).
-- VGBL por UF via `SES_UF2.csv` (ramos 0994/1392) e análise per capita com população do IBGE.
-- Previdência tradicional (`ses_prev_trad_resgates.csv`).
-- Quantidade de participantes (`ses_quantprev_part.csv`), após resolver estoques negativos e sub-linhas.
-- Orquestração como *Job* do Databricks com ingestão incremental de novas bases do SES (os *snapshots* já são identificados por `_data_geracao_base_ses`).
-- Análise de eventos regulatórios (ex.: IOF sobre VGBL em 2025) com metodologia causal apropriada.
+- **Granularidade dos resgates:** a partir de 12/2013, os arquivos passaram a apresentar múltiplas linhas por empresa e mês sem uma coluna que as diferenciasse. Foi necessário distinguir duplicatas exatas de sub-linhas legítimas antes da agregação.
+- **Portabilidade:** a documentação não identifica diretamente o significado dos códigos `R` e `D`, exigindo validação na consulta oficial do SES. Códigos não documentados foram mantidos em quarentena.
+- **Grupo econômico:** como empresas podem mudar de grupo ao longo do tempo, foi necessário realizar uma atribuição temporal para evitar que o grupo atual fosse aplicado retroativamente a todo o histórico.
+- **Unidade econômica:** durante a análise, foi identificado que tratar o código genérico `99999` como um único grupo distorceria os resultados. A regra foi revisada para considerar cada empresa desse grupo como uma unidade econômica própria.
+- **Ambiente:** as limitações do Databricks Free Edition levaram à ingestão manual dos arquivos para um Volume do Unity Catalog.
 
+O resultado apresenta limitações importantes. Os valores são nominais e, portanto, comparações de longo prazo não descontam a inflação. A conciliação entre diferentes fontes do SES não é integral, especialmente para os resgates de PGBL, e o saldo agregado de portabilidade não é perfeitamente simétrico. Além disso, as análises são descritivas e não permitem estabelecer relações causais.
+
+Como evolução do projeto, seria possível incorporar correção monetária pelo IPCA, ampliar a análise geográfica, incluir previdência tradicional e quantidade de participantes e automatizar a atualização da base por meio de um Job do Databricks com ingestão incremental. Análises sobre os efeitos de mudanças regulatórias também poderiam ser desenvolvidas futuramente com metodologia apropriada.
+
+De forma geral, o MVP demonstrou que a construção de uma base analítica confiável depende não apenas da implementação do pipeline, mas também da compreensão da origem, granularidade, qualidade e significado dos dados em cada etapa.
 ---
 
 ## Referências
