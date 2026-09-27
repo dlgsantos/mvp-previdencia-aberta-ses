@@ -64,9 +64,9 @@ Os notebooks são executados em sequência (01 → 04) no Databricks Free Editio
 ## 1. Contexto de Negócios e Perguntas
 
 ### Contexto e problema
-A previdência complementar aberta reúne planos oferecidos por seguradoras e EAPPs supervisionadas pela SUSEP. VGBL e PGBL, os dois principais produtos, somavam cerca de R$ 1,8 trilhão em PMBaC em julho de 2026 e movimentam centenas de bilhões de reais por ano em contribuições, resgates e portabilidades.
+A previdência complementar aberta reúne planos oferecidos por seguradoras e EAPPs supervisionadas pela SUSEP. Neste trabalho, são analisados VGBL e PGBL. Na base utilizada, os dois produtos somavam cerca de R$ 1,8 trilhão em PMBaC em julho de 2026 e movimentavam centenas de bilhões de reais por ano em contribuições, resgates e portabilidades.
 
-Esses dados são publicados no SES, mas espalhados em vários arquivos, com problemas de formato, granularidade e documentação (seção 5), e sem integração que permita acompanhar entradas e saídas por grupo econômico. Usá-los diretamente pode levar a erros de soma, à atribuição incorreta de grupos ao longo do tempo e à leitura equivocada dos fluxos.
+Esses dados são publicados no SES, mas estão distribuídos em vários arquivos, com problemas de formato, granularidade e documentação (seção 5), e sem integração que permita acompanhar entradas e saídas por grupo econômico. Usá-los diretamente pode levar a erros de soma, à atribuição incorreta de grupos ao longo do tempo e à interpretação equivocada dos fluxos.
 
 ### Objetivos
 Construir no Databricks um pipeline Bronze → Silver → Gold reprodutível sobre o SES que:
