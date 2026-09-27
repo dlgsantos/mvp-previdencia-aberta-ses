@@ -478,7 +478,7 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 | 2026 | 82,8 | 74,8 | **8,0** | −0,8 |
 
 **Resposta**
-- **VGBL.** As contribuições cresceram 2,5 vezes entre 2014 e 2024 (de R$ 71 bi para R$ 178 bi). Em 2025 houve uma ruptura: as contribuições caíram 22% (para R$ 139 bi), enquanto os resgates seguiram subindo (R$ 136 bi). O FLCR caiu de **R$ 59,0 bi para R$ 3,5 bi**, e a relação resgate por real contribuído, que variou entre 0,43 e 0,78 de 2014 a 2024, chegou a **0,97**.
+- **VGBL.** As contribuições passaram de R$71,3 bi para R$178,3 bi, ficando aproximadamente 2,5 vezes maiores (+150%) entre 2014 e 2024. Em 2025 houve uma ruptura: as contribuições caíram 22% (para R$ 139 bi), enquanto os resgates seguiram subindo (R$ 136 bi). O FLCR caiu de **R$ 59,0 bi para R$ 3,5 bi**, e a relação resgate por real contribuído, que variou entre 0,43 e 0,78 de 2014 a 2024, chegou a **0,97**.
 - Na série mensal, o FLCR do VGBL ficou **negativo em vários meses do 2º semestre de 2025** e voltou a ser positivo, em nível baixo, a partir do fim de 2025. Em **jan–jul/2026, o FLCR (R$ 8,0 bi) é o menor da série comparável** e as contribuições (R$ 82,8 bi) são menores que as de jan–jul de 2024 e de 2025.
 - **PGBL.** O fluxo é bem menor e estável: FLCR positivo em todos os anos, com mínimo de R$ 1,2 bi em 2025. O FLCR de jan–jul do PGBL é **negativo em todos os anos**, porque as contribuições se concentram em **dezembro**, quando o participante aproveita a dedução no IR do ano-calendário. O padrão aparece nos picos de dezembro da série mensal e nos *outliers* da seção de Qualidade.
 
@@ -498,7 +498,7 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 
 **Resposta**
 - No VGBL, a taxa caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em **10,1% tanto em 2024 quanto em 2025**. Em jan–jul/2026 ela é a **menor da série comparável** (5,1%, contra 6,0% em 2025). No PGBL, a taxa é estável, entre 5,3% e 6,5%.
-- **Esse é o resultado que explica a Q1.** Os resgates de VGBL cresceram em reais (R$ 119 bi → R$ 136 bi), mas na **mesma proporção do estoque**, que chegou a R$ 1,3–1,5 trilhão. **A queda do FLCR em 2025–2026 não vem de uma saída proporcionalmente maior de recursos, e sim da redução das contribuições.** Essa leitura só é possível porque o pipeline integra o fluxo (resgates) com o estoque (PMBaC). Olhando só o fluxo, a conclusão seria "os resgates dispararam".
+- **Esse resultado ajuda a interpretar a Q1.** Os resgates de VGBL cresceram em reais (R$ 119 bi → R$ 136 bi), mas na **mesma proporção do estoque**, que chegou a R$ 1,3–1,5 trilhão. **Os dados indicam que a queda do FLCR em 2025-2026 está associada principalmente à redução das contribuições, já que a taxa de resgate permaneceu relativamente estável** Essa leitura só é possível porque o pipeline integra o fluxo (resgates) com o estoque (PMBaC). Olhando só o fluxo, a conclusão seria "os resgates dispararam".
 
 ![Q2 tabela](docs/img/04_q2_tabela.png)
 ![Q2 gráfico](docs/img/04_q2_grafico.png)
@@ -526,7 +526,7 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 - **VGBL:** o HHI caiu 27%, e os 5 maiores ainda somam mais de 90% das contribuições. A liderança continua com os grupos ligados a grandes bancos (Brasil, Bradesco). A Caixa subiu do 5º para o 3º lugar, e o Itaú caiu do 3º para o 4º.
 - **PGBL:** a desconcentração foi maior (HHI −27%, top-5 de 84% para 79%). O Itaú assumiu a liderança, e **Icatu e XP entraram entre os 5 maiores**, no lugar de HSBC e Caixa.
 
-Como referência usual, as diretrizes de concentração dos EUA (2023) classificam HHI acima de 1.800 como mercado altamente concentrado. Por esse critério, o VGBL permanece nessa faixa e o PGBL saiu dela. O uso da **atribuição temporal de grupo** foi essencial aqui: com o grupo "atual" retroativo, as participações históricas de empresas que trocaram de controlador ficariam no grupo errado.
+O HHI do VGBL caiu de 2.774 em 2014 para 2.026 em 2025, indicando redução da concentração segundo a própria evolução do índice. No PGBL, a queda foi de 1.992 para 1.445 no mesmo período, também acompanhada pela redução da participação dos cinco maiores grupos. O uso da **atribuição temporal de grupo** foi essencial para essa análise: utilizar o grupo atual de forma retroativa atribuiria incorretamente as participações históricas das empresas que mudaram de grupo econômico ao longo do período.
 
 ![Q3 tabela](docs/img/04_q3_tabela.png)
 ![Q3 gráfico](docs/img/04_q3_grafico.png)
@@ -589,7 +589,7 @@ O problema central era a falta de uma base integrada e auditável que permitisse
 
 1. **2014–2024 foi uma década de crescimento.** As contribuições de VGBL cresceram 2,5 vezes e a PMBaC dos dois produtos passou de ~R$ 350 bi para ~R$ 1,6 tri (médias anuais).
 2. **Em 2025 houve uma ruptura no fluxo de entrada, não na saída.** O FLCR do VGBL caiu 94%. A taxa de resgate (Q2), porém, ficou estável (10,1%). O que mudou foi o volume de contribuições. Em jan–jul/2026 o quadro persiste: contribuições menores e taxa de resgate na mínima da série.
-3. **A estrutura competitiva está mudando.** A concentração caiu (Q3), e a portabilidade (Q4) move dezenas de bilhões por ano **dos grandes grupos bancários para unidades como XP, Banco Pactual e Itaú**.
+3. **A estrutura competitiva está mudando.** A concentração caiu (Q3), e a portabilidade (Q4) redistribui dezenas de bilhões por ano entre as unidades econômicas; em 2025, XP, Banco Pactual e Itaú apresentaram saldos líquidos positivos relevantes, enquanto Brasil, Bradesco, Sul América e Icatu apresentaram saldos líquidos negativos.”
 4. **A escolha da métrica muda as conclusões** (Q5). Sem separar FLCR e portabilidade, o maior receptor de recursos do mercado em 2025 (XP) apareceria com resultado negativo.
 
 **Contexto regulatório de 2025, com as devidas separações**
