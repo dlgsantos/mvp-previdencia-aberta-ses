@@ -74,9 +74,10 @@ Setembro de 2026
 
 ---
 
+
 ## Visão geral do repositório
 
-Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog + Delta Lake + PySpark/Spark SQL), organizado na arquitetura medalhão **Bronze → Silver → Gold**, a partir da base pública do **SES — Sistema de Estatísticas da SUSEP**.
+Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog, Delta Lake, PySpark e Spark SQL), organizado na arquitetura medalhão Bronze → Silver → Gold a partir da base pública do SES/SUSEP.
 
 | Notebook | Conteúdo |
 |---|---|
@@ -85,30 +86,22 @@ Pipeline de dados construído no **Databricks Free Edition** (Unity Catalog + De
 | [`notebooks/03_gold_modelo_catalogo.py`](notebooks/03_gold_modelo_catalogo.py) | Esquema estrela, PK/FK, testes da Gold e catálogo de dados |
 | [`notebooks/04_analises.py`](notebooks/04_analises.py) | Consultas e visualizações que respondem às perguntas de negócio |
 
-Execução: sequencial, 01 → 02 → 03 → 04, no Databricks (catálogo `previdencia`, schemas `bronze`, `silver`, `gold`).
+Execução sequencial (01 → 02 → 03 → 04) no Databricks, no catálogo `previdencia`, com os schemas `bronze`, `silver` e `gold`.
 
 ---
 
 ## 1. Contexto de Negócios e Perguntas
 
 ### Contexto
-A previdência complementar aberta reúne planos oferecidos por seguradoras e entidades abertas de previdência (EAPP), supervisionadas pela SUSEP. Os dois produtos dominantes são o **VGBL** (seguro de pessoas com cobertura por sobrevivência) e o **PGBL** (plano de previdência). Juntos, eles acumulam da ordem de R$ 1,8 trilhão em provisões e movimentam centenas de bilhões de reais por ano em contribuições, resgates e portabilidades.
+A previdência complementar aberta reúne planos oferecidos por seguradoras e entidades abertas de previdência (EAPP), supervisionadas pela SUSEP. Os dois principais produtos são o VGBL e o PGBL, que somavam cerca de R$ 1,8 trilhão em PMBaC em julho de 2026 e movimentam centenas de bilhões de reais por ano em contribuições, resgates e portabilidades.
 
-A SUSEP publica esses dados no SES, a partir dos Formulários de Informações Periódicas (FIP) enviados pelas empresas. Os dados são públicos, mas chegam fragmentados em dezenas de arquivos, com:
-- encoding Windows-1252;
-- vírgula decimal;
-- chaves com espaços;
-- mudança de granularidade ao longo do tempo;
-- duplicatas;
-- domínios não documentados;
-- grupo econômico ausente do cadastro;
-- divergências entre tabelas.
+A SUSEP publica esses dados no SES, a partir dos Formulários de Informações Periódicas (FIP) enviados pelas empresas. Os dados são públicos, mas estão distribuídos em dezenas de arquivos e apresentam problemas de formato, granularidade e documentação que precisam ser tratados antes de qualquer análise (detalhados na seção 5).
 
 ### Problema
-Os dados do SES estão distribuídos em diferentes arquivos e não estão diretamente integrados para acompanhar entradas e saídas de VGBL e PGBL por grupo econômico. Seu uso direto pode gerar erros de soma, atribuição de grupos ao longo do tempo e interpretação de fluxos como contribuições, resgates e portabilidades.
+Os dados do SES não estão integrados de forma que permita acompanhar entradas e saídas de VGBL e PGBL por grupo econômico. O uso direto dos arquivos pode gerar erros de soma, atribuição incorreta de grupos ao longo do tempo e interpretação equivocada de fluxos como contribuições, resgates e portabilidades.
 
 ### Objetivo geral
-Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível sobre o SES/SUSEP que responda às perguntas abaixo.
+Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível sobre o SES/SUSEP que responda às perguntas de negócio abaixo.
 
 ### Objetivos específicos
 1. Ingerir os arquivos preservando o original, com metadados de rastreabilidade.
@@ -131,20 +124,20 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 |---|---|---|---|---|
 | Contribuições | Σ `contrib` (`tipoProd` ∈ {VGBL, PGBL}) | `Ses_Contrib_Benef` | empresa × mês × produto | Valores nominais |
 | Resgates | Σ (`resg_total` + `resg_parcial`) após remover duplicatas exatas e somar as sub-linhas | `Ses_vgbl_resgates`, `ses_pgbl_resgates` | empresa × mês × produto | Sub-linhas pós-12/2013 não identificadas; `Resg_Pag_programado` (não documentado) fora da soma |
-| **FLCR** (fluxo líquido de contribuições e resgates) | Contribuições − Resgates | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates` | agregável | Não inclui portabilidade, benefícios, rentabilidade; não é variação da reserva |
+| **FLCR** (fluxo líquido de contribuições e resgates) | Contribuições − Resgates | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates` | agregável | Não inclui portabilidade, benefícios nem rentabilidade; não é a variação da reserva |
 | **Saldo líquido de portabilidade** | Aceita (`TIPOTRANSF`=R) − Cedida (`TIPOTRANSF`=D) | `ses_transferenciasexternas` (`TIPOPLANO` ∈ {VGBL, PGBL}) | empresa/grupo × produto × período | Direção R/D confirmada no SES online; tende a ~0 no agregado do mercado |
-| **Captação líquida** | FLCR + Saldo líquido de portabilidade | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates`; `ses_transferenciasexternas` | empresa/grupo × período | Conceito de mercado (relatórios baseados no SES), não definição normativa; exclui benefícios |
-| **Taxa de resgate** | Σ resgates do período ÷ média dos saldos mensais de PMBaC |	`Ses_vgbl_resgates`, `ses_pgbl_resgates` ; `Ses_vgbl_fundos`, `ses_pgbl_fundos`| produto × ano | Denominador afetado por rentabilidade e portabilidade; 2026 só jan–jul |
-| **HHI** | Σ (participação × 100)² das contribuições | 	`Ses_Contrib_Benef`; `Ses_grupos_economicos` ; `Ses_cias` | produto × ano | Empresas do grupo 99999 ("outros") ou sem grupo contam como unidades próprias |
+| **Captação líquida** | FLCR + Saldo líquido de portabilidade | `Ses_Contrib_Benef`; `Ses_vgbl_resgates`, `ses_pgbl_resgates`; `ses_transferenciasexternas` | empresa/grupo × período | Conceito usado em relatórios de mercado baseados no SES (ex.: Caixa Seguridade), não é definição normativa; exclui benefícios |
+| **Taxa de resgate** | Σ resgates do período ÷ média dos saldos mensais de PMBaC | `Ses_vgbl_resgates`, `ses_pgbl_resgates`; `Ses_vgbl_fundos`, `ses_pgbl_fundos` | produto × ano | Denominador afetado por rentabilidade e portabilidade; 2026 só jan–jul |
+| **HHI** | Σ (participação × 100)² das contribuições | `Ses_Contrib_Benef`; `Ses_grupos_economicos`; `Ses_cias` | produto × ano | Empresas do grupo 99999 ou sem grupo contam como unidades próprias |
 
-**Unidade econômica (Q3, Q4, Q5):** o grupo econômico vigente no mês. Quando a empresa está no código genérico 99999 ("OUTROS GRUPOS") da SUSEP, que não é um grupo real, a própria empresa é a unidade, identificada como "(sem grupo)".
+**Unidade econômica (Q3, Q4, Q5):** grupo econômico vigente no mês. Quando a empresa está no código genérico 99999 ("OUTROS GRUPOS"), que não é um grupo real, a própria empresa é a unidade, identificada como "(sem grupo)".
 
-**Período:** jan/2014 a jul/2026. 2014 é o primeiro ano completo após a mudança de granularidade de 12/2013. Anos completos: 2014–2025. **2026 só é comparado em base jan–jul.**
+**Período:** jan/2014 a jul/2026. 2014 é o primeiro ano completo após a mudança de granularidade de 12/2013. As comparações anuais usam 2014–2025, e 2026 só é comparado em base jan–jul.
 
 ### Dados brutos, estrutura e licença
-**Fonte:** SUSEP — SES, *Base de Dados do SES* (`BaseCompleta.zip`), gerada em 21/09/2026, dados até 07/2026 — https://www2.susep.gov.br/menuestatistica/ses/principal.aspx. Documentação oficial das tabelas: `Documentacao_das_tabelas.rtf` (mesma página).
+**Fonte:** SUSEP — SES, *Base de Dados do SES* (`BaseCompleta.zip`), gerada em 21/09/2026, com dados até 07/2026: https://www2.susep.gov.br/menuestatistica/ses/principal.aspx. A documentação oficial das tabelas (`Documentacao_das_tabelas.rtf`) está na mesma página.
 
-**Licença:** Não foi identificado arquivo de licença específico junto ao download. A base é disponibilizada publicamente pela SUSEP para fornecimento de estatísticas dos mercados supervisionados. Neste projeto, os dados são utilizados para finalidade acadêmica, com indicação da fonte, e os arquivos brutos não são redistribuídos no repositório.
+**Licença:** não foi identificado arquivo de licença específico junto ao download. A base é disponibilizada publicamente pela SUSEP para fornecimento de estatísticas dos mercados supervisionados. Neste projeto, os dados são utilizados para finalidade acadêmica, com indicação da fonte, e os arquivos brutos não são redistribuídos no repositório.
 
 | Arquivo | Linhas* | Colunas (originais) | Conteúdo |
 |---|---|---|---|
@@ -154,20 +147,20 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 | `ses_transferenciasexternas.csv` | 17.746 | COENTI, DAMESANO, TIPOTRANSF, TIPOPLANO, VALOR, QUANTIDADE | Portabilidades externas |
 | `Ses_vgbl_fundos.csv` | 6.184 | coenti, damesano, fundos | PMBaC VGBL (fundos) |
 | `ses_pgbl_fundos.csv` | 7.122 | coenti, damesano, fundos | PMBaC PGBL (fundos) |
-| `ses_pgbl_uf.csv` | 129.216 | COENTI, DAMESANO, UF, CONTRIB, BENEFPAGO, RESGPAGO, NUMPARTIC, NUMBENEF, NUMRESG | PGBL por UF (somente conciliação) |
+| `ses_pgbl_uf.csv` | 129.216 | COENTI, DAMESANO, UF, CONTRIB, BENEFPAGO, RESGPAGO, NUMPARTIC, NUMBENEF, NUMRESG | PGBL por UF (usado apenas na conciliação) |
 | `Ses_cias.csv` | 769 | Coenti, Noenti, Cogrupo, Nogrupo | Cadastro de empresas |
 | `Ses_grupos_economicos.csv` | 66.461 | damesano, coenti, noenti, cogrupo, nogrupo | Grupo econômico por empresa e mês |
 
-\* contagens confirmadas no notebook 01 (linhas no arquivo = linhas na tabela Bronze para os 9 arquivos).
+\* Contagens confirmadas no notebook 01 (linhas no arquivo = linhas na tabela Bronze nos 9 arquivos).
 
 ---
 
 ## 2. Carga dos Dados
 
-1. Download manual do `BaseCompleta.zip` na página do SES, em 26/09/2026, e descompactação local. O ZIP contém 40 CSVs. **9 foram selecionados** para o escopo.
-2. Upload dos 9 CSVs para o **Volume do Unity Catalog** `/Volumes/previdencia/bronze/raw/ses/` pela interface do Databricks. O Free Edition restringe o acesso de saída à internet, e o upload para Volume é o caminho documentado pela plataforma.
-3. O notebook [`01_bronze.py`](notebooks/01_bronze.py) lê cada CSV com `sep=';'`, `encoding=windows-1252` e todas as colunas como texto. Ele grava tabelas Delta em `previdencia.bronze.*` e acrescenta os metadados `_arquivo_origem`, `_data_geracao_base_ses`, `_mes_referencia_max`, `_ts_ingestao` e `_hash_linha`.
-4. Teste de completude da carga: nº de linhas de cada tabela = nº de linhas de dados do arquivo.
+1. Download manual do `BaseCompleta.zip` na página do SES, em 26/09/2026, e descompactação local. O ZIP contém 40 CSVs, dos quais 9 foram selecionados para o escopo.
+2. Upload dos 9 CSVs para o Volume do Unity Catalog `/Volumes/previdencia/bronze/raw/ses/` pela interface do Databricks. O Free Edition restringe o acesso de saída à internet, e o upload para Volume é o caminho documentado pela plataforma.
+3. O notebook [`01_bronze.py`](notebooks/01_bronze.py) lê cada CSV com `sep=';'`, `encoding=windows-1252` e todas as colunas como texto, grava tabelas Delta em `previdencia.bronze.*` e acrescenta os metadados `_arquivo_origem`, `_data_geracao_base_ses`, `_mes_referencia_max`, `_ts_ingestao` e `_hash_linha`.
+4. Teste de completude da carga: o número de linhas de cada tabela Bronze deve ser igual ao número de linhas de dados do arquivo.
 
 **Volume com os arquivos brutos**
 ![Volume raw](docs/img/01_volume_raw.png)
@@ -182,7 +175,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 
 ## 3. Modelagem e Catálogo de Dados
 
-### 3.1 Modelo — esquema estrela com associação temporal de grupo
+### 3.1 Modelo: esquema estrela com associação temporal de grupo
 ```
                           dim_tempo (mes_ref)
                                  │ 1:N
@@ -207,25 +200,25 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 | `dim_grupo` | dimensão | grupo econômico | cod_grupo | — | 122 |
 
 **Decisões de modelagem**
-- **Um único fato de fluxo.** Contribuições, resgates e portabilidade têm exatamente o mesmo grão (mês × empresa × produto), e as métricas derivadas combinam as três: FLCR = contribuições − resgates; captação líquida = FLCR + saldo de portabilidade. Separá-las em três fatos obrigaria a *joins* entre fatos em todas as consultas. A junção é um *full outer* das chaves das três origens, e as *flags* `fl_tem_contribuicao`, `fl_tem_resgate` e `fl_tem_portabilidade` indicam de onde veio cada valor.
-- **Fato de estoque separado.** A PMBaC é uma fotografia de fim de mês (não é aditiva no tempo), por isso fica em `fato_pmbac`, com o mesmo grão e as mesmas dimensões.
-- **Grupo econômico com atribuição temporal.** 175 empresas do mercado (74 das 124 de previdência) mudaram de grupo ao longo do histórico. Alguns exemplos reais: a empresa 05843 passou por Liberty, Talanx, Indiana, Bradesco e Independente, e 06238/05665/06181 passaram por Vera Cruz → MAPFRE → BBMAPFRE. Atribuir todo o histórico ao grupo atual distorceria a concentração e os rankings. A `ponte_empresa_grupo_mes` resolve, para cada empresa × mês, o grupo **vigente no mês** (*as-of join*: o último grupo informado com mês ≤ mês do fato). O fato carrega esse `cod_grupo` como FK. Resultado: **3.731 atribuições EXATAS, 1 HERDADA (1 mês de defasagem) e 0 NAO_INFORMADO**.
-- **Chaves no Unity Catalog.** Foram criadas **7 PKs e 11 FKs** como *constraints* informativas. A validade delas é garantida pelos testes da Gold (unicidade e órfãos = 0).
+- **Um único fato de fluxo.** Contribuições, resgates e portabilidade têm o mesmo grão (mês × empresa × produto), e as métricas derivadas combinam as três (FLCR e captação líquida). Por isso ficaram em uma só tabela. As chaves das três origens são unidas e cada origem é associada a esse conjunto de chaves, de modo que um mês com resgate ou portabilidade, mas sem contribuição, continua presente. Valores ausentes viram 0, e as *flags* `fl_tem_contribuicao`, `fl_tem_resgate` e `fl_tem_portabilidade` indicam de onde veio cada valor.
+- **Fato de estoque separado.** A PMBaC é uma posição de fim de mês e não pode ser somada ao longo do tempo. Por isso fica em `fato_pmbac`, com o mesmo grão e as mesmas dimensões.
+- **Grupo econômico com atribuição temporal.** 175 empresas do mercado (74 das 124 de previdência) mudaram de grupo ao longo do histórico. Por exemplo, a empresa 05843 passou por Liberty, Talanx, Indiana, Bradesco e Independente, e as empresas 06238, 05665 e 06181 passaram por Vera Cruz, MAPFRE e BBMAPFRE. Usar o grupo atual para todo o histórico distorceria a concentração e os rankings. A `ponte_empresa_grupo_mes` define, para cada empresa × mês, o grupo vigente naquele mês (*as-of join*: o último grupo informado com mês ≤ mês do fato), e esse `cod_grupo` é gravado nas tabelas fato. Resultado: 3.731 atribuições EXATAS, 1 HERDADA (1 mês de defasagem) e 0 NAO_INFORMADO. As análises Q3–Q5 usam essa atribuição.
+- **Chaves no Unity Catalog.** Foram criadas 7 PKs e 11 FKs como *constraints* informativas. A validade delas é verificada pelos testes da Gold (unicidade e órfãos = 0).
 
 ![Atribuição temporal de grupo](docs/img/03_ponte_atribuicao.png)
 ![Histórico de grupos por empresa](docs/img/02_grupos_temporais.png)
 
 ### 3.2 Catálogo de dados
-O catálogo foi construído em três formas complementares:
-1. **`COMMENT` em cada tabela e coluna no Unity Catalog**, visível no Catalog Explorer, com descrição e linhagem da tabela;
-2. **tabela `gold.catalogo_dados`**, gerada automaticamente no notebook 03. Para cada coluna das camadas Silver e Gold, ela registra descrição, tipo, **domínio observado calculado a partir dos dados** (mínimo/máximo para números e datas; categorias para textos) e % de nulos. Exportada em [`docs/evidencias/catalogo_dados_gold.csv`](docs/evidencias/catalogo_dados_gold.csv);
-3. **linhagem**: descrita no comentário de cada tabela e capturada **automaticamente pelo Unity Catalog** (grafo abaixo).
+O catálogo foi construído de três formas complementares:
+1. `COMMENT` em cada tabela e coluna das camadas Silver e Gold no Unity Catalog, visível no Catalog Explorer, com a descrição e a linhagem da tabela;
+2. tabela `gold.catalogo_dados`, gerada no notebook 03, que registra para cada coluna da Silver e da Gold a descrição, o tipo, o domínio observado (calculado a partir dos dados: mínimo/máximo para números e datas, categorias para textos) e o % de nulos. A parte da Gold foi exportada em [`docs/evidencias/catalogo_dados_gold.csv`](docs/evidencias/catalogo_dados_gold.csv);
+3. linhagem descrita no comentário de cada tabela e também capturada automaticamente pelo Unity Catalog (grafo abaixo).
 
-**Catálogo transcrito — modelo Gold**
+**Catálogo transcrito: modelo Gold**
 
 #### `gold.fato_fluxo_previdencia`
 *Fato de fluxos mensais por empresa e produto: contribuições, resgates, FLCR, portabilidade e captação líquida.*  
-**Linhagem:** silver.contribuicoes ⟗ silver.resgates ⟗ silver.portabilidade, via FULL OUTER JOIN pela chave (mes_ref, cod_empresa, cod_produto), seguida de associação à gold.ponte_empresa_grupo_mes por (mes_ref, cod_empresa) para atribuição do grupo econômico vigente.
+**Linhagem:** as chaves (mes_ref, cod_empresa, cod_produto) são obtidas pela união (`UNION`) de `silver.contribuicoes`, `silver.resgates` e `silver.portabilidade`. Cada uma dessas tabelas é associada às chaves por `LEFT JOIN`, o que equivale a um *full outer join* das três origens; ausências viram 0 e são sinalizadas pelas *flags* `fl_tem_*`. Em seguida, `INNER JOIN` com `gold.ponte_empresa_grupo_mes` por (cod_empresa, mes_ref) para obter o grupo vigente no mês. Filtro de período jan/2014–jul/2026; FLCR, saldo de portabilidade e captação líquida são calculados nessa etapa.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -249,7 +242,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.fato_pmbac`
 *Fato de estoque de PMBaC de fim de mês por empresa e produto.*  
-**Linhagem:** silver.pmbac, associada à gold.ponte_empresa_grupo_mes por (mes_ref, cod_empresa) para atribuição do grupo econômico vigente.
+**Linhagem:** `silver.pmbac` (união dos arquivos de fundos de VGBL e PGBL) com `INNER JOIN` em `gold.ponte_empresa_grupo_mes` por (cod_empresa, mes_ref) para obter o grupo vigente no mês. Filtro de período jan/2014–jul/2026.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -261,7 +254,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.ponte_empresa_grupo_mes`
 *Grupo vigente para cada empresa em cada mês (atribuição as-of).*  
-**Linhagem:** chaves distintas (cod_empresa, mes_ref) provenientes das tabelas de fatos, associadas à silver.empresa_grupo_mensal por atribuição temporal (as-of), utilizando o último grupo econômico informado para a empresa com mês menor ou igual ao mês de referência.
+**Linhagem:** chaves distintas (cod_empresa, mes_ref) obtidas da união de `silver.contribuicoes`, `silver.resgates`, `silver.portabilidade` e `silver.pmbac`, filtradas para jan/2014–jul/2026. Essas chaves são associadas a `silver.empresa_grupo_mensal` por `LEFT JOIN` em cod_empresa, com a condição mês do grupo ≤ mês da chave; um `ROW_NUMBER` ordenado pelo mês do grupo (decrescente) mantém apenas o registro mais recente (*as-of join*). Sem correspondência, o grupo recebe `NAO_INFORMADO`. `tipo_atribuicao` e `meses_defasagem` são derivados da diferença entre os dois meses.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -273,7 +266,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_tempo`
 *Dimensão de meses de jan/2014 a jul/2026.*  
-**Linhagem:** gerada no notebook 03_gold_modelo_catalogo.py por sequência mensal de mes_ref, com derivação dos atributos de ano, mês, trimestre, ano completo e período jan–jul.
+**Linhagem:** não vem de tabela de origem. É gerada no notebook 03 com `sequence()` mensal de jan/2014 a jul/2026, e os atributos de ano, mês, trimestre, ano completo e período jan–jul são derivados de `mes_ref`.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -282,22 +275,22 @@ O catálogo foi construído em três formas complementares:
 | `fl_ano_completo` | Verdadeiro para anos com 12 meses na base (2014–2025). | boolean | {false, true} | 0 |
 | `fl_periodo_ytd` | Verdadeiro para meses jan–jul (base de comparação com 2026). | boolean | {false, true} | 0 |
 | `mes` | Mês (1–12). | int | [1 ; 12] | 0 |
-| `mes_ref` | Mês de referência (1º dia do mês), derivado de damesano (AAAAMM). | date | [2014-01-01 ; 2026-07-01] | 0 |
+| `mes_ref` | Mês de referência (1º dia do mês). | date | [2014-01-01 ; 2026-07-01] | 0 |
 | `trimestre` | Trimestre (1–4). | int | [1 ; 4] | 0 |
 
 #### `gold.dim_produto`
 *Dimensão de produtos do escopo (VGBL, PGBL).*  
-**Linhagem:** Definida no notebook 03_gold_modelo_catalogo.py a partir dos dois produtos incluídos no escopo do projeto: VGBL e PGBL.
+**Linhagem:** não vem de tabela de origem. As duas linhas (VGBL e PGBL) são definidas diretamente no notebook 03, de acordo com o escopo do projeto.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
 | `cod_produto` | Produto: VGBL ou PGBL. | string | {PGBL, VGBL} | 0 |
-| `descricao_produto` | Descrição do produto. | string | {Plano de previdência complementar aberta; contribuições dedutíveis da base do IR (decl… | 0 |
+| `descricao_produto` | Descrição do produto. | string | 2 textos descritivos (um por produto) | 0 |
 | `nome_produto` | Nome do produto. | string | {Plano Gerador de Benefício Livre, Vida Gerador de Benefício Livre} | 0 |
 
 #### `gold.dim_empresa`
 *Dimensão de empresas.*  
-**Linhagem:** silver.empresa, com uma linha por cod_empresa e os respectivos dados cadastrais.
+**Linhagem:** cópia de `silver.empresa`, sem joins. Essa tabela vem de `bronze.ses_cias`, com `trim` no código e no nome e exclusão das colunas `Cogrupo`/`Nogrupo` (100% vazias).
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -306,18 +299,35 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_grupo`
 *Dimensão de grupos econômicos (nome mais recente) + NAO_INFORMADO.*  
-**Linhagem:** silver.empresa_grupo_mensal, consolidada por cod_grupo, utilizando o nome mais recente de cada grupo econômico e incluindo a categoria NAO_INFORMADO.
+**Linhagem:** `silver.empresa_grupo_mensal`, com um `ROW_NUMBER` por cod_grupo ordenado pelo mês (decrescente) para manter o nome mais recente de cada grupo, e `UNION ALL` de uma linha fixa `NAO_INFORMADO`.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
 | `cod_grupo` | Código do grupo econômico (99999 = 'OUTROS GRUPOS', genérico; NAO_INFORMADO = sem histórico). | string | 122 valores distintos (ex.: 00019, 00027, 00035 ...) | 0 |
-| `fl_grupo_generico` | Verdadeiro para o código 99999 (não é um grupo real; no HHI cada empresa conta como unidade própria). | boolean | {false, true} | 0 |
+| `fl_grupo_generico` | Verdadeiro para o código 99999 e para NAO_INFORMADO (não são grupos reais; nas análises Q3–Q5 cada empresa conta como unidade própria). | boolean | {false, true} | 0 |
 | `nome_grupo` | Nome do grupo econômico. | string | 122 valores distintos (ex.: ACE, AGF BRASIL, ALFA ...) | 0 |
 
+#### `gold.catalogo_dados`
+*Catálogo de dados do projeto: uma linha por coluna das tabelas Silver e Gold.*  
+**Linhagem:** gerada no notebook 03 a partir do schema de cada tabela (tipo), dos dicionários de descrição e linhagem definidos no notebook e de estatísticas calculadas sobre os dados (mínimo/máximo, categorias e % de nulos). Não usa joins.
+
+| Coluna | Descrição | Tipo | Domínio |
+|---|---|---|---|
+| `camada` | Camada da tabela descrita. | string | {GOLD, SILVER} |
+| `tabela` | Nome da tabela descrita. | string | tabelas Silver e Gold do projeto |
+| `descricao_tabela` | Descrição da tabela. | string | texto livre |
+| `linhagem` | Origem e transformações da tabela. | string | texto livre |
+| `coluna` | Nome da coluna. | string | nomes de colunas |
+| `descricao_coluna` | Descrição da coluna. | string | texto livre |
+| `tipo` | Tipo de dado da coluna. | string | tipos Spark (string, date, int, boolean, decimal(20,2)…) |
+| `dominio_observado` | Mínimo/máximo ou categorias observadas. | string | texto gerado |
+| `pct_nulos` | Percentual de nulos da coluna. | double | [0 ; 100] |
+
 **Observações sobre domínios**
-- `fl_contribuicao_negativa` tem domínio `{false}` na Gold. As 2 contribuições negativas de VGBL/PGBL da Silver são anteriores a 2014, ou seja, ficam fora do período do modelo.
-- `vl_portab_aceita` tem mínimo negativo (−R$ 780 mil): é um dos 5 valores negativos de portabilidade (estornos), mantidos e sinalizados na Silver.
-- `dim_empresa` e `dim_grupo` trazem o cadastro completo do mercado. Os fatos usam 30 empresas e 21 grupos.
+- `fl_contribuicao_negativa` tem domínio `{false}` na Gold porque as 2 contribuições negativas de VGBL/PGBL da Silver são anteriores a 2014, fora do período do modelo.
+- `vl_portab_aceita` tem mínimo negativo (−R$ 780 mil), que corresponde a um dos 5 valores negativos de portabilidade, mantidos e sinalizados na Silver.
+- `dim_empresa` e `dim_grupo` trazem o cadastro completo do mercado; os fatos usam 30 empresas e 21 grupos.
+- O catálogo das tabelas Silver está nos `COMMENT`s do Unity Catalog e em `gold.catalogo_dados` (filtro `camada = 'SILVER'`).
 
 **Unity Catalog: colunas com comentários e PK/FK na interface**
 ![Catalog Explorer - colunas](docs/img/03_catalog_colunas.png)
@@ -336,19 +346,19 @@ O catálogo foi construído em três formas complementares:
 
 ## 4. Pipeline de Dados
 
-O pipeline foi organizado em **quatro notebooks**, executados em sequência no Databricks (computação *serverless*). Cada um lê apenas as tabelas da camada anterior e grava tabelas **Delta** gerenciadas pelo Unity Catalog, no catálogo `previdencia`. Todos os notebooks são idempotentes (sobrescrevem as tabelas da sua camada) e podem ser reexecutados do início.
+O pipeline foi organizado em quatro notebooks, executados em sequência no Databricks com computação *serverless*. Cada notebook lê as tabelas da camada anterior e grava tabelas Delta gerenciadas pelo Unity Catalog no catálogo `previdencia`. As tabelas de cada camada são sobrescritas a cada execução, então o pipeline pode ser reexecutado do início.
 
 | Etapa | Notebook | Entrada | Saída | Principais transformações |
 |---|---|---|---|---|
 | Ingestão | [`01_bronze.py`](notebooks/01_bronze.py) | 9 CSVs no Volume | `bronze.*` (9 tabelas) | nenhuma no conteúdo; leitura `windows-1252`/`;`; metadados de ingestão; teste de contagem arquivo × tabela |
 | Limpeza e qualidade | [`02_silver_qualidade.py`](notebooks/02_silver_qualidade.py) | `bronze.*` | `silver.empresa`, `empresa_grupo_mensal`, `contribuicoes`, `resgates`, `portabilidade`, `pmbac`, `dq_conciliacao_pgbl`, `dq_resultados`, `quarentena` | trim; padronização de nomes; vírgula→ponto; `DECIMAL(20,2)`; AAAAMM→`DATE`; remoção de duplicatas exatas (com prova de soma zero); agregação das sub-linhas pós-12/2013; união VGBL+PGBL; mapeamento R/D; *flags*; quarentena; 59 testes |
-| Modelagem | [`03_gold_modelo_catalogo.py`](notebooks/03_gold_modelo_catalogo.py) | `silver.*` | `dim_*`, `ponte_empresa_grupo_mes`, `fato_fluxo_previdencia`, `fato_pmbac`, `catalogo_dados` | *as-of join* do grupo; *full outer* das métricas; FLCR e captação líquida; PK/FK; 24 testes (unicidade, integridade, conservação de totais); `COMMENT`s |
+| Modelagem | [`03_gold_modelo_catalogo.py`](notebooks/03_gold_modelo_catalogo.py) | `silver.*` | `dim_*`, `ponte_empresa_grupo_mes`, `fato_fluxo_previdencia`, `fato_pmbac`, `catalogo_dados` | *as-of join* do grupo; união de chaves + `LEFT JOIN` das métricas; FLCR e captação líquida; PK/FK; 24 testes (unicidade, integridade, conservação de totais); `COMMENT`s |
 | Consumo | [`04_analises.py`](notebooks/04_analises.py) | `gold.*` | consultas e gráficos | agregações anuais, jan–jul e mensais; taxa de resgate; HHI; rankings |
 
 **Exemplos de transformações documentadas**
 - *"Uni `ses_vgbl_resgates` e `ses_pgbl_resgates` com a coluna `cod_produto`, removi 15.029 duplicatas exatas após verificar que a soma removida era R$ 0,00 e somei as sub-linhas por empresa × mês × produto, porque a partir de 12/2013 a fonte passou a entregar até 3 linhas por chave sem coluna que as diferencie."*
 - *"Fiz um* as-of join *das chaves dos fatos com `silver.empresa_grupo_mensal` para atribuir a cada fluxo o grupo econômico vigente no mês, porque 175 empresas mudaram de grupo ao longo do tempo."*
-- *"Fiz* full outer join *de contribuições, resgates e portabilidade pela chave mês × empresa × produto, porque há meses em que uma empresa tem resgate ou portabilidade sem contribuição. O teste de conservação confirma que os totais da Gold são idênticos aos da Silver (diferença R$ 0,00 nas 5 métricas)."*
+- *"Uni as chaves mês × empresa × produto de contribuições, resgates e portabilidade e associei cada origem por* left join*, porque há meses em que uma empresa tem resgate ou portabilidade sem contribuição. O teste de conservação confirma que os totais da Gold são idênticos aos da Silver (diferença de R$ 0,00 nas 5 métricas)."*
 
 **Tabelas persistidas**
 ![Silver](docs/img/02_silver_tabelas.png)
@@ -361,44 +371,44 @@ O pipeline foi organizado em **quatro notebooks**, executados em sequência no D
 
 ## 5. Qualidade de Dados
 
-A qualidade foi tratada como parte do pipeline. Cada problema foi **diagnosticado com evidência antes de ser tratado**. Nenhum valor foi alterado silenciosamente: os registros não interpretáveis vão para `silver.quarentena`, e os valores atípicos legítimos são **mantidos e sinalizados** com flags.
+Cada problema foi diagnosticado com evidência antes de ser tratado, e nenhum valor foi alterado silenciosamente. Os registros que não puderam ser interpretados com segurança foram para `silver.quarentena`, e os valores atípicos legítimos foram mantidos e sinalizados com *flags*.
 
-Todos os testes ficam gravados em `silver.dq_resultados` (camada, tabela, dimensão, regra, métrica, valor, esperado, status, ação). A execução completa gerou **59 testes na Silver: 27 OK, 25 ALERTA (problema real da fonte, tratado e documentado) e 7 INFO**, e **nenhuma FALHA**. O arquivo exportado está em [`docs/evidencias/dq_resultados_silver.csv`](docs/evidencias/dq_resultados_silver.csv).
+Os testes ficam gravados em `silver.dq_resultados` (camada, tabela, dimensão, regra, métrica, valor, esperado, status, ação). Na Silver foram executados 59 testes: 27 OK, 25 ALERTA (problema real da fonte, tratado e documentado), 7 INFO e nenhuma FALHA. Exportação: [`docs/evidencias/dq_resultados_silver.csv`](docs/evidencias/dq_resultados_silver.csv).
 
 ### 5.1 Problemas encontrados → evidência → tratamento
 
 | # | Dimensão | Problema | Evidência (execução no Databricks) | Tratamento | Justificativa |
 |---|---|---|---|---|---|
-| 1 | Consistência | Encoding Windows-1252 | **225 nomes** de empresas corrompidos (`�`) se lidos como UTF-8; **0** lendo como windows-1252 | leitura com `encoding=windows-1252` | charset real do arquivo |
+| 1 | Consistência | Encoding Windows-1252 | 225 nomes de empresas corrompidos (`�`) lidos como UTF-8; 0 lidos como windows-1252 | leitura com `encoding=windows-1252` | charset real do arquivo |
 | 2 | Consistência | Vírgula decimal e resíduo de ponto flutuante | 90,4% dos valores de `contrib` com vírgula; ex.: `31557844,9700002` | vírgula→ponto; `DECIMAL(20,2)` via `try_cast` (0 valores não numéricos) | tipagem correta sem perder informação |
 | 3 | Consistência | Período AAAAMM em texto | `damesano` | → `DATE` (1º dia do mês); 3 meses inválidos em quarentena | operações temporais |
-| 4 | Consistência | Nomes de colunas inconsistentes | **3 variantes** para a empresa (`coenti`, `COENTI`, `Coenti`) nos 9 arquivos | padronização para `cod_empresa`, `ano_mes`, `mes_ref` | joins e catálogo consistentes |
-| 5 | Consistência | Espaços nas chaves | **100%** das linhas de `Ses_cias` (769) e dos arquivos de fundos (7.122 e 6.184) | `trim` em todas as chaves | sem isso o join falha silenciosamente |
+| 4 | Consistência | Nomes de colunas inconsistentes | 3 variantes para a empresa (`coenti`, `COENTI`, `Coenti`) nos 9 arquivos | padronização para `cod_empresa`, `ano_mes`, `mes_ref` | joins e catálogo consistentes |
+| 5 | Consistência | Espaços nas chaves | 100% das linhas de `Ses_cias` (769) e dos arquivos de fundos (7.122 e 6.184) | `trim` em todas as chaves | sem isso o join falha silenciosamente |
 | 6 | Completude | Colunas 100% vazias | `Cogrupo`/`Nogrupo` (cadastro); `BENEFPAGO`/`NUMBENEF` (`ses_pgbl_uf`) | excluídas / não usadas | sem conteúdo; o grupo vem de `ses_grupos_economicos` |
-| 7 | Consistência (schema × documentação) | Coluna não documentada | `Resg_Pag_programado` presente nos 2 arquivos de resgate, ausente da documentação SUSEP | mantida em coluna própria, **fora** de `vl_resgate` | transparência |
-| 8 | Unicidade | Duplicatas exatas nos resgates | **15.029 linhas** repetidas; **soma removida = R$ 0,00** | removidas **somente após** provar que a soma removida é zero (senão o pipeline aborta) | não carregam informação |
-| 9 | Consistência temporal | **Mudança de granularidade** | 1 linha por empresa×mês até 11/2013; **a partir de 12/2013**, até 3 sub-linhas sem coluna que as diferencie | soma por empresa×mês×produto | são parcelas do mesmo total. Teste de continuidade em 12/2013: VGBL 13,8% (p90 histórico 16,5%) e PGBL 5,3% (p90 64,2%) → **sem salto artificial** |
-| 10 | Consistência (domínio) | `TIPOTRANSF` fora do domínio | valores `D`, `R`, **`r`**, **`P`**: 3 linhas / R$ 6,5 mi | R→ACEITA, D→CEDIDA (confirmado no SES online, §5.2); `r` e `P` em **quarentena**, sem interpretação | a documentação só diz "Aceita ou Cedida" |
-| 11 | Completude / escopo | `TIPOPLANO` vazio e outras modalidades | 45 linhas sem produto (R$ 254,6 mi); VGBL+PGBL = **99,18%** do valor portado | somente VGBL e PGBL no escopo; o restante é quantificado | foco do MVP |
-| 12 | Acurácia | `QUANTIDADE` de portabilidades implausível | **22 linhas** com valor médio < R$ 100 por portabilidade; ex.: empresa 06033, 12/2012: **2,75 bilhões** de portabilidades (≈ R$ 0,001 cada) | flag `fl_qtd_portab_suspeita`; `QUANTIDADE` **não** é usada nas análises | limiar heurístico: a mediana é ≈ R$ 96,9 mil por portabilidade e o percentil 0,1% ≈ R$ 32 |
-| 13 | Validade | Valores negativos | contribuições VGBL/PGBL: **2 linhas** (−R$ 61,3 mi); portabilidade: **5 linhas** | mantidos com flag | estornos/ajustes são legítimos no FIP |
-| 14 | Consistência temporal | Grupo econômico muda no tempo | **175 empresas** do mercado com mais de um grupo no histórico (74 das 124 de previdência); 3 linhas sem grupo e 3 com mês inválido (quarentena) | tabela empresa×mês + atribuição *as-of* na Gold | cada fluxo pertence ao grupo **da época** |
-| 15 | Integridade referencial | Empresas órfãs | **0** em contribuições, resgates, portabilidade, PMBaC e grupos | — | joins da Gold sem perda |
-| 16 | Integridade | PMBaC compatível com a taxa de resgate | 82 pares de resgate sem estoque (2014+), **todos com R$ 0,00** | — | todo real resgatado tem estoque correspondente → Q2 é válida |
-| 17 | Outliers | Contribuições atípicas | **17 empresa×mês** com contribuição > 5× a média dos 12 meses anteriores e > R$ 50 mi, concentradas em **PGBL em dezembro** | **mantidos** | sazonalidade real: a contribuição ao PGBL é dedutível do IR no ano-calendário |
-| 18 | Acurácia (conciliação entre fontes) | Duas fontes SUSEP para PGBL divergem | contribuições: **85,8%** dos pares empresa×mês idênticos até 0,1% (87,8% até 1%); resgates: **71,4%** até 0,1% (77,4% até 1%) | **nenhuma fonte "corrigida"**; `ses_contrib_benef` e os arquivos de resgates são as fontes oficiais; `ses_pgbl_uf` serve só como verificação | quadros diferentes do FIP; a divergência maior nos resgates indica diferença de conceito entre `RESGPAGO` (UF) e `resg_total + resg_parcial` (hipótese) |
-| 19 | Acurácia (coerência) | Simetria da portabilidade no mercado | Σ aceita > Σ cedida em **todos** os anos; máximo de 15,6% (2017), **2–4% desde 2018** → ALERTA (limite 15%) | mantido como ALERTA; **o limiar não foi ajustado após o resultado** | diferença residual = fluxos com entidades/modalidades fora do escopo (hipótese). O saldo por grupo é válido, mas o saldo de mercado não é exatamente zero |
+| 7 | Consistência (schema × documentação) | Coluna não documentada | `Resg_Pag_programado` presente nos 2 arquivos de resgate e ausente da documentação SUSEP | mantida em coluna própria, fora de `vl_resgate` | transparência |
+| 8 | Unicidade | Duplicatas exatas nos resgates | 15.029 linhas repetidas; soma removida = R$ 0,00 | removidas somente após provar que a soma removida é zero (caso contrário, o pipeline para) | não carregam informação |
+| 9 | Consistência temporal | Mudança de granularidade | 1 linha por empresa × mês até 11/2013; a partir de 12/2013, até 3 sub-linhas sem coluna que as diferencie | soma por empresa × mês × produto | são parcelas do mesmo total. Teste de continuidade em 12/2013: VGBL 13,8% (p90 histórico 16,5%) e PGBL 5,3% (p90 64,2%), sem salto artificial |
+| 10 | Consistência (domínio) | `TIPOTRANSF` fora do domínio | valores `D`, `R`, `r`, `P`; `r` e `P` somam 3 linhas / R$ 6,5 mi | R→ACEITA, D→CEDIDA (confirmado no SES online, §5.2); `r` e `P` em quarentena, sem interpretação | a documentação só diz "Aceita ou Cedida" |
+| 11 | Completude / escopo | `TIPOPLANO` vazio e outras modalidades | 45 linhas sem produto (R$ 254,6 mi); VGBL+PGBL = 99,18% do valor portado | somente VGBL e PGBL no escopo; o restante é quantificado | foco do MVP |
+| 12 | Acurácia | `QUANTIDADE` de portabilidades implausível | 22 linhas com valor médio < R$ 100 por portabilidade; ex.: empresa 06033, 12/2012: 2,75 bilhões de portabilidades (≈ R$ 0,001 cada) | flag `fl_qtd_portab_suspeita`; `QUANTIDADE` não é usada nas análises | limiar heurístico: a mediana é ≈ R$ 96,9 mil por portabilidade e o percentil 0,1% ≈ R$ 32 |
+| 13 | Validade | Valores negativos | contribuições VGBL/PGBL: 2 linhas (−R$ 61,3 mi); portabilidade: 5 linhas | mantidos com flag | estornos/ajustes são legítimos no FIP |
+| 14 | Consistência temporal | Grupo econômico muda no tempo | 175 empresas do mercado com mais de um grupo no histórico (74 das 124 de previdência); 3 linhas sem grupo e 3 com mês inválido (quarentena) | tabela empresa × mês + atribuição *as-of* na Gold (§3.1) | cada fluxo pertence ao grupo da época |
+| 15 | Integridade referencial | Empresas órfãs | 0 em contribuições, resgates, portabilidade, PMBaC e grupos | — | joins da Gold sem perda |
+| 16 | Integridade | PMBaC compatível com a taxa de resgate | 82 pares de resgate sem estoque (2014+), todos com R$ 0,00 | — | todo valor resgatado tem estoque correspondente, o que viabiliza a Q2 |
+| 17 | Outliers | Contribuições atípicas | 17 empresa × mês com contribuição > 5× a média dos 12 meses anteriores e > R$ 50 mi, concentradas em PGBL em dezembro | mantidos | sazonalidade real: a contribuição ao PGBL é dedutível do IR no ano-calendário |
+| 18 | Acurácia (conciliação entre fontes) | Duas fontes SUSEP para PGBL divergem | contribuições: 85,8% dos pares empresa × mês idênticos até 0,1% (87,8% até 1%); resgates: 71,4% até 0,1% (77,4% até 1%) | nenhuma fonte foi corrigida; `ses_contrib_benef` e os arquivos de resgates são as fontes oficiais, e `ses_pgbl_uf` serve só como verificação | quadros diferentes do FIP; a divergência maior nos resgates pode indicar diferença de conceito entre `RESGPAGO` (UF) e `resg_total + resg_parcial` (hipótese) |
+| 19 | Acurácia (coerência) | Simetria da portabilidade no mercado | Σ aceita > Σ cedida em todos os anos; máximo de 15,6% (2017) e 2–4% desde 2018 → ALERTA (limite 15%) | mantido como ALERTA; o limiar não foi ajustado após o resultado | a diferença residual pode vir de fluxos com entidades/modalidades fora do escopo (hipótese). O saldo por grupo é válido, mas o saldo de mercado não é exatamente zero |
 
 ### 5.2 Direção da portabilidade (R/D) confirmada na fonte oficial
 
-A documentação das tabelas informa apenas "Tipo de transferência (Aceita ou Cedida)", sem dizer qual letra corresponde a cada direção. O mapeamento foi **confirmado na consulta oficial do SES online** (*Previdência: Portabilidades Externas*, empresa 04031, grupo VGBL, período 202509):
+A documentação das tabelas informa apenas "Tipo de transferência (Aceita ou Cedida)", sem indicar qual letra corresponde a cada direção. O mapeamento foi confirmado na consulta oficial do SES online (*Previdência: Portabilidades Externas*, empresa 04031, grupo VGBL, período 202509):
 
 | SES online | Valor | Quantidade | Linha no CSV |
 |---|---|---|---|
 | Valor Aceito | R$ 2.757.725.564 | 12.805 | `04031;202509;R;VGBL;2757725563,85;12805` |
 | Valor Cedido | R$ 287.146.012 | 1.140 | `04031;202509;D;VGBL;287146011,54;1140` |
 
-Portanto **R = aceita** e **D = cedida**. Os códigos `r` e `P`, que não aparecem na documentação, **não** foram interpretados por analogia e ficaram em quarentena.
+Portanto, R = aceita e D = cedida. Os códigos `r` e `P`, que não aparecem na documentação, não foram interpretados por analogia e ficaram em quarentena.
 
 ![SES online — portabilidade](docs/img/02_ses_online_portabilidade.png)
 
@@ -416,11 +426,11 @@ Portanto **R = aceita** e **D = cedida**. Os códigos `r` e `P`, que não aparec
 **Colunas 100% vazias em `ses_pgbl_uf`**
 ![Colunas vazias](docs/img/02_pgbl_uf_colunas_vazias.png)
 
-**Duplicatas exatas e soma removida = 0**
+**Duplicatas exatas (soma removida = 0) e testes dos resgates agregados**
 ![Duplicatas](docs/img/02_duplicatas_resgates.png)
 ![Testes de resgates](docs/img/02_resgates_testes.png)
 
-**Mudança de granularidade (linhas por empresa×mês, por ano)**
+**Mudança de granularidade (linhas por empresa × mês, por ano)**
 ![Granularidade](docs/img/02_granularidade.png)
 
 **Continuidade da série na quebra de 12/2013**
@@ -447,12 +457,7 @@ Portanto **R = aceita** e **D = cedida**. Os códigos `r` e `P`, que não aparec
 
 ## 6. Análise de Dados
 
-Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](notebooks/04_analises.py), executadas sobre a camada Gold.
-
-**Convenções**
-- valores em **R$ bilhões nominais**, sem correção pela inflação (limitação declarada);
-- comparações anuais usam apenas **anos completos (2014–2025)**;
-- **2026 só é comparado em base jan–jul** com os mesmos meses dos anos anteriores.
+As respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](notebooks/04_analises.py), executadas sobre a camada Gold. Valores em R$ bilhões nominais, sem correção pela inflação. As comparações anuais usam apenas anos completos (2014–2025), e 2026 é comparado somente em base jan–jul.
 
 ### Q1. Como evoluíram contribuições, resgates e FLCR de VGBL e PGBL?
 
@@ -477,15 +482,13 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 | 2025 | 92,3 | 78,3 | **14,1** | −2,1 |
 | 2026 | 82,8 | 74,8 | **8,0** | −0,8 |
 
-**Resposta**
-- **VGBL.** As contribuições passaram de R$71,3 bi para R$178,3 bi, ficando aproximadamente 2,5 vezes maiores (+150%) entre 2014 e 2024. Em 2025 houve uma ruptura: as contribuições caíram 22% (para R$ 139 bi), enquanto os resgates seguiram subindo (R$ 136 bi). O FLCR caiu de **R$ 59,0 bi para R$ 3,5 bi**, e a relação resgate por real contribuído, que variou entre 0,43 e 0,78 de 2014 a 2024, chegou a **0,97**.
-- Na série mensal, o FLCR do VGBL ficou **negativo em vários meses do 2º semestre de 2025** e voltou a ser positivo, em nível baixo, a partir do fim de 2025. Em **jan–jul/2026, o FLCR (R$ 8,0 bi) é o menor da série comparável** e as contribuições (R$ 82,8 bi) são menores que as de jan–jul de 2024 e de 2025.
-- **PGBL.** O fluxo é bem menor e estável: FLCR positivo em todos os anos, com mínimo de R$ 1,2 bi em 2025. O FLCR de jan–jul do PGBL é **negativo em todos os anos**, porque as contribuições se concentram em **dezembro**, quando o participante aproveita a dedução no IR do ano-calendário. O padrão aparece nos picos de dezembro da série mensal e nos *outliers* da seção de Qualidade.
+**Resposta.** No VGBL, as contribuições passaram de R$ 71,3 bi (2014) para R$ 178,3 bi (2024), cerca de 2,5 vezes mais. Em 2025 caíram 22%, para R$ 139,3 bi, enquanto os resgates subiram para R$ 135,8 bi. Com isso, o FLCR caiu de R$ 59,0 bi para R$ 3,5 bi, e a relação resgate/contribuição, que variou entre 0,43 e 0,78 de 2014 a 2024, chegou a 0,97. Na série mensal, o FLCR do VGBL ficou negativo em vários meses do 2º semestre de 2025. Em jan–jul/2026 o FLCR (R$ 8,0 bi) é o menor da série jan–jul calculada (2021–2026).
+
+No PGBL, o FLCR anual foi positivo em todos os anos, com mínimo de R$ 1,2 bi em 2025. Já o FLCR de jan–jul foi negativo em todos os anos calculados (2021–2026), porque as contribuições se concentram em dezembro, quando o participante aproveita a dedução no IR do ano-calendário. Esse padrão também aparece entre os *outliers* da seção 5.
 
 ![Q1 anual](docs/img/04_q1_anual.png)
 ![Q1 gráfico](docs/img/04_q1_grafico.png)
 ![Q1 jan-jul](docs/img/04_q1_ytd.png)
-![Q1 mensal - tabela](docs/img/04_q1_mensal_tabela.png)
 ![Q1 mensal](docs/img/04_q1_mensal_grafico.png)
 
 ### Q2. Como evoluiu a taxa de resgate (resgates ÷ PMBaC média)?
@@ -496,9 +499,9 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 | **PGBL** | 6,3% | 6,3% | 5,3% | 5,3% | 6,2% | 5,6% | 5,6% | 3,6% | **3,0%** |
 | PMBaC média VGBL (R$ bi) | 269 | 432 | 697 | 760 | 887 | 1.179 | 1.339 | 1.304 | 1.481 |
 
-**Resposta**
-- No VGBL, a taxa caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em **10,1% tanto em 2024 quanto em 2025**. Em jan–jul/2026 ela é a **menor da série comparável** (5,1%, contra 6,0% em 2025). No PGBL, a taxa é estável, entre 5,3% e 6,5%.
-- **Esse resultado ajuda a interpretar a Q1.** Os resgates de VGBL cresceram em reais (R$ 119 bi → R$ 136 bi), mas na **mesma proporção do estoque**, que chegou a R$ 1,3–1,5 trilhão. **Os dados indicam que a queda do FLCR em 2025-2026 está associada principalmente à redução das contribuições, já que a taxa de resgate permaneceu relativamente estável** Essa leitura só é possível porque o pipeline integra o fluxo (resgates) com o estoque (PMBaC). Olhando só o fluxo, a conclusão seria "os resgates dispararam".
+**Resposta.** No VGBL, a taxa de resgate caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em 10,1% em 2024 e em 2025. Em jan–jul/2026 foi de 5,1%, o menor valor da série jan–jul calculada (2021–2026). No PGBL, a taxa variou entre 5,3% e 6,5% ao longo do período.
+
+Esse resultado ajuda a interpretar a Q1. Os resgates de VGBL aumentaram em valor (R$ 119,2 bi → R$ 135,8 bi), mas na mesma proporção do estoque. Assim, os dados indicam que a queda do FLCR em 2025–2026 está associada principalmente à redução das contribuições, e não a uma saída proporcionalmente maior de recursos.
 
 ![Q2 tabela](docs/img/04_q2_tabela.png)
 ![Q2 gráfico](docs/img/04_q2_grafico.png)
@@ -520,13 +523,9 @@ Todas as respostas vêm das consultas Spark SQL do notebook [`04_analises.py`](n
 | 4º | Zurich Santander* 4,9% | Itaú 10,4% | HSBC 4,8% | **Icatu 12,1%** |
 | 5º | Caixa 4,5% | Zurich Santander* 8,2% | Caixa 4,7% | **XP*** 10,3% |
 
-\* empresas classificadas pela SUSEP no grupo genérico 99999 ("outros grupos"), tratadas como unidade econômica própria.
+\* Empresas classificadas pela SUSEP no grupo genérico 99999, tratadas como unidade econômica própria.
 
-**Resposta.** O mercado continua concentrado, mas **menos concentrado do que em 2014 nos dois produtos**:
-- **VGBL:** o HHI caiu 27%, e os 5 maiores ainda somam mais de 90% das contribuições. A liderança continua com os grupos ligados a grandes bancos (Brasil, Bradesco). A Caixa subiu do 5º para o 3º lugar, e o Itaú caiu do 3º para o 4º.
-- **PGBL:** a desconcentração foi maior (HHI −27%, top-5 de 84% para 79%). O Itaú assumiu a liderança, e **Icatu e XP entraram entre os 5 maiores**, no lugar de HSBC e Caixa.
-
-O HHI do VGBL caiu de 2.774 em 2014 para 2.026 em 2025, indicando redução da concentração segundo a própria evolução do índice. No PGBL, a queda foi de 1.992 para 1.445 no mesmo período, também acompanhada pela redução da participação dos cinco maiores grupos. O uso da **atribuição temporal de grupo** foi essencial para essa análise: utilizar o grupo atual de forma retroativa atribuiria incorretamente as participações históricas das empresas que mudaram de grupo econômico ao longo do período.
+**Resposta.** As contribuições continuam concentradas em poucos grupos, mas menos do que em 2014 nos dois produtos. No VGBL, o HHI das contribuições caiu 27% (2.774 → 2.026), e os 5 maiores grupos ainda respondem por mais de 90% das contribuições; a Caixa passou de 5º para 3º e o Itaú de 3º para 4º. No PGBL, o HHI também caiu 27% (1.992 → 1.445) e a participação dos 5 maiores passou de 84,4% para 78,5%; o Itaú assumiu a liderança, e Icatu e XP entraram entre os 5 maiores, no lugar de HSBC e Caixa. As participações foram calculadas com a atribuição temporal de grupo descrita na seção 3.1.
 
 ![Q3 tabela](docs/img/04_q3_tabela.png)
 ![Q3 gráfico](docs/img/04_q3_grafico.png)
@@ -534,7 +533,7 @@ O HHI do VGBL caiu de 2.774 em 2014 para 2.026 em 2025, indicando redução da c
 
 ### Q4. Qual o saldo líquido de portabilidade por unidade econômica?
 
-Primeiro, a verificação de mercado. O saldo total (aceita − cedida) é pequeno diante do volume portado: em 2025, foram R$ 67,8 bi aceitos contra R$ 65,9 bi cedidos, um saldo de +R$ 1,9 bi (seção 5, item 19). O volume portado mais que **dobrou** entre 2019 (R$ 31 bi) e 2025 (R$ 67 bi).
+No total do mercado, o saldo (aceita − cedida) é pequeno diante do volume portado: em 2025 foram R$ 67,8 bi aceitos e R$ 65,9 bi cedidos, um saldo de +R$ 1,9 bi (ver item 19 da seção 5). O valor aceito mais que dobrou entre 2019 (R$ 31,7 bi) e 2025.
 
 | 2025 (VGBL+PGBL) | Aceita | Cedida | **Saldo líquido** | Contribuições | Saldo ÷ contribuições |
 |---|---|---|---|---|---|
@@ -548,12 +547,9 @@ Primeiro, a verificação de mercado. O saldo total (aceita − cedida) é peque
 | Brasil | 3,0 | 12,9 | **−9,9** | 44,7 | −22% |
 | Icatu | 4,2 | 14,2 | **−10,0** | 5,7 | −177% |
 
-**Resposta**
-- A portabilidade **redistribui recursos de forma concentrada**. Três unidades receberam, em termos líquidos, R$ 32,4 bi em 2025: **XP (+17,0 bi), Banco Pactual (+7,8 bi) e Itaú (+7,5 bi)**. Os maiores cedentes líquidos foram **Icatu (−10,0 bi), Brasil (−9,9 bi), Sul América (−4,6 bi) e Bradesco (−3,6 bi)**.
-- Para XP e Banco Pactual, o saldo de portabilidade é **2 a 4 vezes maior que as contribuições** do ano: a portabilidade é o principal canal de entrada de recursos dessas unidades.
-- Para os grandes grupos bancários (Brasil, Bradesco, Caixa), o saldo negativo representa de 6% a 22% das contribuições: é relevante, mas não domina o fluxo.
-- O saldo positivo do Banco Pactual é **recente e persistente**: ficou próximo de zero até 2019 (R$ 0,3 bi), passou de R$ 0,9 bi em 2020 para R$ 4,2 bi em 2021 e chegou a R$ 7,8 bi em 2025.
-- *Interpretação, não testada:* os maiores receptores líquidos (XP, Banco Pactual) são grupos associados a plataformas de investimento, o que sugere uma migração de reservas dos canais bancários tradicionais para essas plataformas. Os dados do SES não trazem o canal de distribuição, portanto essa leitura é uma hipótese.
+**Resposta.** Em 2025, os maiores saldos líquidos positivos foram de XP (+R$ 17,0 bi), Banco Pactual (+R$ 7,8 bi) e Itaú (+R$ 7,5 bi), que somam R$ 32,4 bi. Os maiores saldos negativos foram de Icatu (−R$ 10,0 bi), Brasil (−R$ 9,9 bi), Sul América (−R$ 4,6 bi) e Bradesco (−R$ 3,6 bi). Para XP e Banco Pactual, o saldo de portabilidade foi maior que as contribuições do próprio ano (391% e 234%). Para Brasil, Bradesco e Caixa, o saldo negativo equivale a 6%–22% das contribuições. No Banco Pactual, o saldo ficou próximo de zero até 2019 (R$ 0,3 bi) e passou a ser positivo e crescente a partir de 2020 (R$ 0,9 bi), chegando a R$ 7,8 bi em 2025.
+
+A base informa apenas os valores aceitos e cedidos por empresa, sem identificar a contraparte de cada transferência. Por isso, é possível dizer quais unidades tiveram saldo positivo ou negativo, mas não de qual unidade saíram os recursos recebidos por outra.
 
 ![Q4 mercado](docs/img/04_q4_mercado.png)
 ![Q4 tabela](docs/img/04_q4_tabela.png)
@@ -571,13 +567,7 @@ Primeiro, a verificação de mercado. O saldo total (aceita − cedida) é peque
 | Icatu | +1,27 | −9,99 | **−8,72** | 3º | **18º** |
 | Brasil | −5,21 | −9,87 | **−15,08** | 19º | 19º |
 
-**Resposta.** Das **19 unidades** com contribuições em 2025, **15 mudam de posição** e **5 mudam de sinal** quando a portabilidade é incluída:
-- A **XP** tem FLCR negativo (18º lugar) e é a **1ª em captação líquida**.
-- A **Icatu** tem o 3º maior FLCR e cai para o **18º lugar**.
-- A **Caixa** lidera pelo FLCR (entrada de contribuições) e cai para 4º.
-- O **Brasil** é o último nas duas métricas: resgates maiores que contribuições **e** saída líquida por portabilidade.
-
-A conclusão é metodológica e de negócio: **o ranking de "quem cresce" depende da definição da métrica**. O FLCR mede a relação da entidade com seus próprios participantes (aportes e saques). A captação líquida inclui a disputa entre entidades pelas reservas já acumuladas. Deixar as duas métricas explícitas, com nomes distintos (seção 1), evita comparações enganosas.
+**Resposta.** O FLCR considera apenas contribuições e resgates dos próprios participantes; a captação líquida soma a esse valor o saldo de portabilidade com outras entidades. Das 19 unidades com contribuições em 2025, 15 mudam de posição e 5 mudam de sinal quando a portabilidade é incluída. A XP passa de 18º (FLCR negativo) para 1º em captação líquida; a Icatu cai de 3º para 18º; a Caixa, primeira no FLCR, passa para 4º. O Brasil fica em último nas duas métricas, porque tem resgates maiores que as contribuições e saldo de portabilidade negativo. Para comparar unidades, portanto, é preciso deixar claro qual das duas métricas está sendo usada.
 
 ![Q5 tabela](docs/img/04_q5_tabela.png)
 ![Q5 gráfico](docs/img/04_q5_grafico.png)
@@ -585,23 +575,11 @@ A conclusão é metodológica e de negócio: **o ranking de "quem cresce" depend
 
 ### Discussão geral
 
-O problema central era a falta de uma base integrada e auditável que permitisse acompanhar entradas e saídas de recursos de VGBL e PGBL e distribuí-las entre grupos econômicos. O pipeline resolveu isso, e as cinco perguntas contam uma história coerente:
+O pipeline permitiu integrar contribuições, resgates, portabilidade, estoque e grupo econômico em uma base auditada e responder às cinco perguntas. Entre 2014 e 2024 as contribuições de VGBL cresceram cerca de 2,5 vezes, e a PMBaC média dos dois produtos passou de aproximadamente R$ 350 bi (2014) para R$ 1,6 tri (2025). Em 2025 o FLCR do VGBL caiu 94%, mas a taxa de resgate ficou estável; a mudança veio principalmente do lado das contribuições, e o quadro se manteve em jan–jul/2026. No mesmo período, a concentração das contribuições diminuiu, e a portabilidade, que movimentou R$ 67,8 bi aceitos em 2025, teve peso relevante no resultado de algumas unidades, a ponto de alterar o ranking entre FLCR e captação líquida.
 
-1. **2014–2024 foi uma década de crescimento.** As contribuições de VGBL cresceram 2,5 vezes e a PMBaC dos dois produtos passou de ~R$ 350 bi para ~R$ 1,6 tri (médias anuais).
-2. **Em 2025 houve uma ruptura no fluxo de entrada, não na saída.** O FLCR do VGBL caiu 94%. A taxa de resgate (Q2), porém, ficou estável (10,1%). O que mudou foi o volume de contribuições. Em jan–jul/2026 o quadro persiste: contribuições menores e taxa de resgate na mínima da série.
-3. **A estrutura competitiva está mudando.** A concentração caiu (Q3), e a portabilidade (Q4) redistribui dezenas de bilhões por ano entre as unidades econômicas; em 2025, XP, Banco Pactual e Itaú apresentaram saldos líquidos positivos relevantes, enquanto Brasil, Bradesco, Sul América e Icatu apresentaram saldos líquidos negativos.”
-4. **A escolha da métrica muda as conclusões** (Q5). Sem separar FLCR e portabilidade, o maior receptor de recursos do mercado em 2025 (XP) apareceria com resultado negativo.
+**Contexto regulatório de 2025.** As contribuições de VGBL caíram de R$ 178,3 bi em 2024 para R$ 139,3 bi em 2025. No mesmo período houve mudanças na tributação de IOF sobre determinados aportes em VGBL (Decreto nº 12.499/2025, com suspensão e posterior restabelecimento cautelar pelo STF em julho de 2025). A coincidência temporal é relevante como contexto, mas não permite afirmar uma relação causal, cuja investigação está fora do escopo deste MVP.
 
-**Contexto regulatório de 2025**
-As contribuições de VGBL caíram de R$ 178,3 bi em 2024 para R$ 139,3 bi em 2025. No mesmo período, ocorreram mudanças na tributação de IOF sobre determinados aportes em VGBL. A coincidência temporal é relevante como contexto, mas não permite afirmar uma relação causal, cuja investigação está fora do escopo deste MVP de Engenharia de Dados.
-
-**Qualidade e confiabilidade das respostas.** As respostas se apoiam em uma base auditada:
-- 59 testes na Silver e 24 na Gold, com 0 falhas;
-- conservação de totais Silver → Gold (diferença R$ 0,00);
-- direção da portabilidade confirmada na fonte oficial;
-- conciliação de contribuições PGBL entre duas fontes SUSEP de 86–88%.
-
-As principais ressalvas são os valores nominais e a portabilidade de mercado não exatamente simétrica (+R$ 1,9 bi em 2025).
+**Confiabilidade.** As respostas se apoiam em 59 testes na Silver e 24 na Gold, sem falhas; na conservação de totais Silver → Gold (diferença de R$ 0,00); na direção da portabilidade confirmada na fonte oficial; e na conciliação de contribuições PGBL entre duas fontes da SUSEP (86–88%). As principais ressalvas são os valores nominais e a assimetria residual da portabilidade de mercado (+R$ 1,9 bi em 2025).
 
 ---
 
@@ -609,21 +587,22 @@ As principais ressalvas são os valores nominais e a portabilidade de mercado n�
 
 O MVP atingiu seu objetivo principal de construir um pipeline de dados em nuvem capaz de integrar e analisar os fluxos de VGBL e PGBL a partir dos dados do SES/SUSEP. A arquitetura Bronze → Silver → Gold permitiu preservar os dados originais, tratar problemas de qualidade de forma rastreável e disponibilizar uma camada modelada para responder às cinco perguntas de negócio.
 
-Um dos principais aprendizados do projeto foi perceber que a maior dificuldade não estava no volume dos dados, mas na sua interpretação e integração. A mudança de granularidade dos arquivos de resgates, os domínios não documentados de portabilidade e as alterações de grupo econômico ao longo do tempo exigiram decisões que não poderiam ser resolvidas apenas com transformações automáticas.
+Um dos principais aprendizados foi perceber que a maior dificuldade não estava no volume dos dados, mas na sua interpretação e integração. A mudança de granularidade dos arquivos de resgates, os domínios não documentados de portabilidade e as alterações de grupo econômico ao longo do tempo exigiram decisões que não poderiam ser resolvidas apenas com transformações automáticas.
 
 Entre os principais desafios, destacam-se:
 
 - **Granularidade dos resgates:** a partir de 12/2013, os arquivos passaram a apresentar múltiplas linhas por empresa e mês sem uma coluna que as diferenciasse. Foi necessário distinguir duplicatas exatas de sub-linhas legítimas antes da agregação.
-- **Portabilidade:** a documentação não identifica diretamente o significado dos códigos `R` e `D`, exigindo validação na consulta oficial do SES. Códigos não documentados foram mantidos em quarentena.
-- **Grupo econômico:** como empresas podem mudar de grupo ao longo do tempo, foi necessário realizar uma atribuição temporal para evitar que o grupo atual fosse aplicado retroativamente a todo o histórico.
-- **Unidade econômica:** durante a análise, foi identificado que tratar o código genérico `99999` como um único grupo distorceria os resultados. A regra foi revisada para considerar cada empresa desse grupo como uma unidade econômica própria.
+- **Portabilidade:** a documentação não identifica diretamente o significado dos códigos `R` e `D`, o que exigiu validação na consulta oficial do SES. Códigos não documentados foram mantidos em quarentena.
+- **Grupo econômico:** como empresas podem mudar de grupo ao longo do tempo, foi necessário fazer uma atribuição temporal para evitar que o grupo atual fosse aplicado retroativamente a todo o histórico.
+- **Unidade econômica:** na primeira versão das análises Q4 e Q5, as empresas do código genérico `99999` foram excluídas, o que deixava de fora a XP, maior saldo positivo de portabilidade em 2025. A regra foi revisada para tratar cada empresa desse código como uma unidade econômica própria, como já era feito na Q3.
 - **Ambiente:** as limitações do Databricks Free Edition levaram à ingestão manual dos arquivos para um Volume do Unity Catalog.
 
-O resultado apresenta limitações importantes. Os valores são nominais e, portanto, comparações de longo prazo não descontam a inflação. A conciliação entre diferentes fontes do SES não é integral, especialmente para os resgates de PGBL, e o saldo agregado de portabilidade não é perfeitamente simétrico. Além disso, as análises são descritivas e não permitem estabelecer relações causais.
+O resultado tem limitações importantes. Os valores são nominais e, portanto, as comparações de longo prazo não descontam a inflação. A conciliação entre diferentes fontes do SES não é integral, especialmente para os resgates de PGBL, e o saldo agregado de portabilidade não é perfeitamente simétrico. O VGBL não tem abertura por UF nas tabelas de previdência utilizadas, e as análises são descritivas, sem permitir relações causais.
 
-Como evolução do projeto, seria possível incorporar correção monetária pelo IPCA, ampliar a análise geográfica, incluir previdência tradicional e quantidade de participantes e automatizar a atualização da base por meio de um Job do Databricks com ingestão incremental. Análises sobre os efeitos de mudanças regulatórias também poderiam ser desenvolvidas futuramente com metodologia apropriada.
+Como evolução, seria possível incorporar correção monetária pelo IPCA, ampliar a análise geográfica, incluir a previdência tradicional e a quantidade de participantes e automatizar a atualização da base com um Job do Databricks e ingestão incremental. Análises sobre os efeitos de mudanças regulatórias também poderiam ser feitas futuramente, com metodologia apropriada.
 
-De forma geral, o MVP demonstrou que a construção de uma base analítica confiável depende não apenas da implementação do pipeline, mas também da compreensão da origem, granularidade, qualidade e significado dos dados em cada etapa.
+De forma geral, o projeto mostrou que construir uma base analítica confiável depende não só da implementação do pipeline, mas também da compreensão da origem, da granularidade, da qualidade e do significado dos dados em cada etapa.
+
 ---
 
 ## Referências
@@ -631,6 +610,5 @@ De forma geral, o MVP demonstrou que a construção de uma base analítica confi
 - Caixa Seguridade — Relatório de desempenho mensal SUSEP (metodologia de captação líquida sobre o SES): https://api.mziq.com/mzfilemanager/v2/d/3972906b-e50b-4f74-ab74-4d0d32125d11/ba4d6c1d-5f10-4cf0-9d59-ce0ae04abd2a?origin=2
 - Decreto nº 12.499, de 11/06/2025 (IOF sobre seguros com cobertura por sobrevivência): https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/decreto/d12499.htm
 - Demarest Advogados — STF restabelece a eficácia do Decreto nº 12.499/2025 (decisão de 16/07/2025): https://www.demarest.com.br/majoracao-do-iof-stf-publica-decisao-cautelar-restabelecendo-a-eficacia-do-decreto-no-12-499-2025/
-- Decreto nº 8.777/2016 — Política de Dados Abertos do Poder Executivo federal.
 - Databricks — Free Edition limitations: https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
-- Databricks — Medallion architecture; Unity Catalog (constraints, comments e data lineage): https://docs.databricks.com
+- Databricks — documentação sobre arquitetura medalhão e Unity Catalog (constraints, comentários e linhagem): https://docs.databricks.com
