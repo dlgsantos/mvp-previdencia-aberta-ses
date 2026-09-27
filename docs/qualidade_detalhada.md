@@ -1,0 +1,26 @@
+# Problemas de qualidade: evidência e tratamento (detalhado)
+
+Complemento da seção 5 do [README](../README.md). Todas as evidências vêm da execução do notebook [`02_silver_qualidade.py`](../notebooks/02_silver_qualidade.py) no Databricks; os resultados dos testes estão em [`evidencias/dq_resultados_silver.csv`](evidencias/dq_resultados_silver.csv).
+
+| # | Dimensão | Problema | Evidência (execução no Databricks) | Tratamento | Justificativa |
+|---|---|---|---|---|---|
+| 1 | Consistência | Encoding Windows-1252 | 225 nomes de empresas corrompidos (`�`) lidos como UTF-8; 0 lidos como windows-1252 | leitura com `encoding=windows-1252` | charset real do arquivo |
+| 2 | Consistência | Vírgula decimal e resíduo de ponto flutuante | 90,4% dos valores de `contrib` com vírgula; ex.: `31557844,9700002` | vírgula→ponto; `DECIMAL(20,2)` via `try_cast` (0 valores não numéricos) | tipagem correta sem perder informação |
+| 3 | Consistência | Período AAAAMM em texto | `damesano` | → `DATE` (1º dia do mês); 3 meses inválidos em quarentena | operações temporais |
+| 4 | Consistência | Nomes de colunas inconsistentes | 3 variantes para a empresa (`coenti`, `COENTI`, `Coenti`) nos 9 arquivos | padronização para `cod_empresa`, `ano_mes`, `mes_ref` | joins e catálogo consistentes |
+| 5 | Consistência | Espaços nas chaves | 100% das linhas de `Ses_cias` (769) e dos arquivos de fundos (7.122 e 6.184) | `trim` em todas as chaves | sem isso o join falha silenciosamente |
+| 6 | Completude | Colunas 100% vazias | `Cogrupo`/`Nogrupo` (cadastro); `BENEFPAGO`/`NUMBENEF` (`ses_pgbl_uf`) | excluídas / não usadas | sem conteúdo; o grupo vem de `ses_grupos_economicos` |
+| 7 | Consistência (schema × documentação) | Coluna não documentada | `Resg_Pag_programado` presente nos 2 arquivos de resgate e ausente da documentação SUSEP | mantida em coluna própria, fora de `vl_resgate` | transparência |
+| 8 | Unicidade | Duplicatas exatas nos resgates | 15.029 linhas repetidas; soma removida = R$ 0,00 | removidas somente após provar que a soma removida é zero (caso contrário, o pipeline para) | não carregam informação |
+| 9 | Consistência temporal | Mudança de granularidade | 1 linha por empresa × mês até 11/2013; a partir de 12/2013, até 3 sub-linhas sem coluna que as diferencie | soma por empresa × mês × produto | são parcelas do mesmo total. Teste de continuidade em 12/2013: VGBL 13,8% (p90 histórico 16,5%) e PGBL 5,3% (p90 64,2%), sem salto artificial |
+| 10 | Consistência (domínio) | `TIPOTRANSF` fora do domínio | valores `D`, `R`, `r`, `P`; `r` e `P` somam 3 linhas / R$ 6,5 mi | R→ACEITA, D→CEDIDA (confirmado no SES online, §5.2); `r` e `P` em quarentena, sem interpretação | a documentação só diz "Aceita ou Cedida" |
+| 11 | Completude / escopo | `TIPOPLANO` vazio e outras modalidades | 45 linhas sem produto (R$ 254,6 mi); VGBL+PGBL = 99,18% do valor portado | somente VGBL e PGBL no escopo; o restante é quantificado | foco do MVP |
+| 12 | Acurácia | `QUANTIDADE` de portabilidades implausível | 22 linhas com valor médio < R$ 100 por portabilidade; ex.: empresa 06033, 12/2012: 2,75 bilhões de portabilidades (≈ R$ 0,001 cada) | flag `fl_qtd_portab_suspeita`; `QUANTIDADE` não é usada nas análises | limiar heurístico: a mediana é ≈ R$ 96,9 mil por portabilidade e o percentil 0,1% ≈ R$ 32 |
+| 13 | Validade | Valores negativos | contribuições VGBL/PGBL: 2 linhas (−R$ 61,3 mi); portabilidade: 5 linhas | mantidos com flag | estornos/ajustes são legítimos no FIP |
+| 14 | Consistência temporal | Grupo econômico muda no tempo | 175 empresas do mercado com mais de um grupo no histórico (74 das 124 de previdência); 3 linhas sem grupo e 3 com mês inválido (quarentena) | tabela empresa × mês + atribuição *as-of* na Gold (README, §3.1) | cada fluxo pertence ao grupo da época |
+| 15 | Integridade referencial | Empresas órfãs | 0 em contribuições, resgates, portabilidade, PMBaC e grupos | — | joins da Gold sem perda |
+| 16 | Integridade | PMBaC compatível com a taxa de resgate | 82 pares de resgate sem estoque (2014+), todos com R$ 0,00 | — | todo valor resgatado tem estoque correspondente, o que viabiliza a Q2 |
+| 17 | Outliers | Contribuições atípicas | 17 empresa × mês com contribuição > 5× a média dos 12 meses anteriores e > R$ 50 mi, concentradas em PGBL em dezembro | mantidos | sazonalidade real: a contribuição ao PGBL é dedutível do IR no ano-calendário |
+| 18 | Acurácia (conciliação entre fontes) | Duas fontes SUSEP para PGBL divergem | contribuições: 85,8% dos pares empresa × mês idênticos até 0,1% (87,8% até 1%); resgates: 71,4% até 0,1% (77,4% até 1%) | nenhuma fonte foi corrigida; `ses_contrib_benef` e os arquivos de resgates são as fontes oficiais, e `ses_pgbl_uf` serve só como verificação | quadros diferentes do FIP; a divergência maior nos resgates pode indicar diferença de conceito entre `RESGPAGO` (UF) e `resg_total + resg_parcial` (hipótese) |
+| 19 | Acurácia (coerência) | Simetria da portabilidade no mercado | Σ aceita > Σ cedida em todos os anos; máximo de 15,6% (2017) e 2–4% desde 2018 → ALERTA (limite 15%) | mantido como ALERTA; o limiar não foi ajustado após o resultado | a diferença residual pode vir de fluxos com entidades/modalidades fora do escopo (hipótese). O saldo por grupo é válido, mas o saldo de mercado não é exatamente zero |
+
