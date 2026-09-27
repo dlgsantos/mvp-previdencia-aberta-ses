@@ -91,12 +91,12 @@ Construir no Databricks um pipeline Bronze → Silver → Gold reprodutível sob
 | Contribuições | Σ `contrib` (`tipoProd` ∈ {VGBL, PGBL}) | `Ses_Contrib_Benef` | Valores nominais |
 | Resgates | Σ (`resg_total` + `resg_parcial`), sem duplicatas exatas e com as sub-linhas somadas | `Ses_vgbl_resgates`, `ses_pgbl_resgates` | `Resg_Pag_programado` (não documentado) fica fora da soma |
 | FLCR | Contribuições − Resgates | as duas acima | Não inclui portabilidade, benefícios nem rentabilidade |
-| Saldo líquido de portabilidade | Aceita (`TIPOTRANSF`=R) − Cedida (`TIPOTRANSF`=D) | `ses_transferenciasexternas` | Tende a ~0 no agregado do mercado |
+| Saldo líquido de portabilidade | Aceita (`TIPOTRANSF`=R) − Cedida (`TIPOTRANSF`=D) | `ses_transferenciasexternas` | Em um universo fechado, espera-se proximidade de zero no agregado; a base apresenta assimetria residual |
 | Captação líquida | FLCR + saldo líquido de portabilidade | as três acima | Conceito de mercado (ex.: Caixa Seguridade), não normativo; exclui benefícios |
 | Taxa de resgate | Σ resgates do período ÷ média dos saldos mensais de PMBaC | resgates; `Ses_vgbl_fundos`, `ses_pgbl_fundos` | Denominador afetado por rentabilidade e portabilidade |
 | HHI | Σ (participação × 100)² das contribuições | `Ses_Contrib_Benef`, `Ses_grupos_economicos`, `Ses_cias` | Vai de 0 (pulverizado) a 10.000 (monopólio) |
 
-O grão de todas as métricas é empresa × mês × produto, agregável por grupo, produto e ano. Nas Q3–Q5, a unidade de análise é a **unidade econômica**: o grupo vigente no mês ou, para empresas do código 99999, a própria empresa, identificada como "(sem grupo)".
+O grão base das tabelas utilizadas no cálculo das métricas é empresa × mês × produto, permitindo agregações por grupo, produto e ano. Nas Q3–Q5, a unidade de análise é a **unidade econômica**: o grupo vigente no mês ou, para empresas do código 99999, a própria empresa, identificada como "(sem grupo)".
 
 **Período:** jan/2014 a jul/2026. 2014 é o primeiro ano completo após a mudança de granularidade de 12/2013; as comparações anuais usam 2014–2025, e 2026 é comparado apenas em base jan–jul.
 
@@ -311,7 +311,7 @@ Quatro notebooks executados em sequência com computação *serverless*. Cada um
 | Modelagem | [`03_gold_modelo_catalogo.py`](notebooks/03_gold_modelo_catalogo.py) | `silver.*` | `dim_*`, `ponte_empresa_grupo_mes`, `fato_fluxo_previdencia`, `fato_pmbac`, `catalogo_dados` | *as-of join* do grupo; união de chaves + `LEFT JOIN` das métricas; FLCR e captação líquida; PK/FK; 24 testes; `COMMENT`s |
 | Consumo | [`04_analises.py`](notebooks/04_analises.py) | `gold.*` | consultas e gráficos | agregações anuais, jan–jul e mensais; taxa de resgate; HHI; rankings |
 
-Exemplo de transformação documentada: *"Uni `ses_vgbl_resgates` e `ses_pgbl_resgates` com a coluna `cod_produto`, removi 15.029 duplicatas exatas após verificar que a soma removida era R$ 0,00 e somei as sub-linhas por empresa × mês × produto, porque a partir de 12/2013 a fonte passou a entregar até 3 linhas por chave sem coluna que as diferencie."*
+Exemplo de transformação documentada: Uni `ses_vgbl_resgates` e `ses_pgbl_resgates` com a coluna `cod_produto`. Foram identificadas 15.029 duplicatas exatas; antes da remoção, verifiquei que a exclusão dessas linhas não alterava o total de resgates (diferença = R$ 0,00). Em seguida, somei as sub-linhas por empresa × mês × produto, pois a partir de 12/2013 a fonte passou a apresentar até 3 linhas por chave sem uma coluna que as diferenciasse.
 
 ![Silver](docs/img/02_silver_tabelas.png)
 ![Gold](docs/img/03_gold_tabelas.png)
@@ -337,7 +337,7 @@ Versão com dimensão de qualidade, evidência completa e justificativa: [`docs/
 | 5 | Espaços nas chaves | 100% das linhas de `Ses_cias` e dos arquivos de fundos | `trim` em todas as chaves |
 | 6 | Colunas 100% vazias | `Cogrupo`/`Nogrupo`; `BENEFPAGO`/`NUMBENEF` | excluídas / não usadas |
 | 7 | Coluna não documentada | `Resg_Pag_programado` | coluna própria, fora de `vl_resgate` |
-| 8 | Duplicatas exatas nos resgates | 15.029 linhas; soma removida = R$ 0,00 | removidas só após provar soma zero |
+| 8 | Duplicatas exatas nos resgates | 15.029 linhas; diferença no total de resgates antes e depois da remoção = R$ 0,00 | removidas somente após confirmar que a remoção não alterava o total |
 | 9 | Mudança de granularidade em 12/2013 | até 3 sub-linhas por empresa × mês | soma por chave; sem salto artificial na série |
 | 10 | `TIPOTRANSF` fora do domínio | `D`, `R`, `r`, `P` | R→ACEITA, D→CEDIDA (§5.2); `r` e `P` em quarentena |
 | 11 | `TIPOPLANO` vazio e outras modalidades | 45 linhas sem produto; VGBL+PGBL = 99,18% do valor | escopo VGBL/PGBL; restante quantificado |
@@ -428,7 +428,7 @@ As contribuições de VGBL passaram de R$ 71,3 bi (2014) para R$ 178,3 bi (2024)
 | PGBL | 6,3% | 6,3% | 5,3% | 5,3% | 6,2% | 5,6% | 5,6% | 3,6% | 3,0% |
 | PMBaC média VGBL (R$ bi) | 269 | 432 | 697 | 760 | 887 | 1.179 | 1.339 | 1.304 | 1.481 |
 
-A taxa do VGBL caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em 10,1% em 2024 e 2025; em jan–jul/2026 (5,1%) é a menor da série jan–jul calculada. No PGBL variou entre 5,3% e 6,5%. Os resgates de VGBL cresceram em valor em 2025, mas na mesma proporção do estoque, o que indica que a queda do FLCR está associada principalmente à redução das contribuições, e não a uma saída proporcionalmente maior de recursos.
+A taxa do VGBL caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em 10,1% em 2024 e 2025; em jan–jul/2026 (5,1%) é a menor da série jan–jul calculada. No PGBL variou entre 5,3% e 6,5%. Os resgates de VGBL cresceram em valor em 2025, mas a taxa de resgate permaneceu em 10,1%, o que indica que a queda do FLCR está associada principalmente à redução das contribuições, e não a um aumento proporcional da taxa de resgate.
 
 ![Q2 tabela](docs/img/04_q2_tabela.png)
 ![Q2 gráfico](docs/img/04_q2_grafico.png)
@@ -497,9 +497,9 @@ O FLCR considera só contribuições e resgates dos próprios participantes; a c
 ![Q5 resumo](docs/img/04_q5_resumo.png)
 
 ### Discussão geral
-Em 2025 o FLCR do VGBL caiu 94% com taxa de resgate estável, ou seja, a mudança veio sobretudo das contribuições, e o quadro se manteve em jan–jul/2026. A concentração das contribuições diminuiu, e a portabilidade teve peso suficiente para alterar o ranking de várias unidades. No mesmo ano houve mudanças na tributação de IOF sobre aportes em VGBL (Decreto nº 12.499/2025, com restabelecimento cautelar pelo STF em julho de 2025); a coincidência temporal é contexto relevante, mas não permite afirmar causalidade.
+Em 2025, o FLCR do VGBL caiu 94%, enquanto a taxa de resgate permaneceu estável. Os resultados apontam, portanto, para maior peso da redução das contribuições nessa mudança, padrão que também se manteve em jan–jul/2026. A concentração das contribuições diminuiu, e a portabilidade teve peso suficiente para alterar o ranking de várias unidades. No mesmo ano houve mudanças na tributação de IOF sobre aportes em VGBL (Decreto nº 12.499/2025, com restabelecimento cautelar pelo STF em julho de 2025); a coincidência temporal é contexto relevante, mas não permite afirmar causalidade.
 
-As respostas se apoiam nos 83 testes sem falhas, na conservação de totais Silver → Gold, na direção da portabilidade confirmada na fonte e na conciliação de contribuições PGBL entre duas fontes da SUSEP. As principais ressalvas são os valores nominais e a assimetria residual da portabilidade de mercado.
+As respostas se apoiam nos 83 testes executados, sem ocorrências classificadas como FALHA, além da conservação de totais Silver → Gold, na direção da portabilidade confirmada na fonte e na conciliação de contribuições PGBL entre duas fontes da SUSEP. As principais ressalvas são os valores nominais e a assimetria residual da portabilidade de mercado.
 
 ---
 
