@@ -10,7 +10,7 @@ Disciplina: Engenharia de Dados
 Pós-Graduação em Ciência de Dados e Analytics  
 Pontifícia Universidade Católica do Rio de Janeiro (PUC-Rio)
 
-**Aluno(a):** Danilo Leandro Gomes dos Santos
+**Aluno:** Danilo Leandro Gomes dos Santos
 
 Setembro de 2026
 
