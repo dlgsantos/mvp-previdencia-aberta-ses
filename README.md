@@ -522,7 +522,7 @@ O projeto mostrou que uma base analítica confiável depende tanto do pipeline q
 
 ## Referências
 - SUSEP — Sistema de Estatísticas da SUSEP (SES), base completa e documentação das tabelas: https://www2.susep.gov.br/menuestatistica/ses/principal.aspx
-- Caixa Seguridade — Relatório de desempenho mensal SUSEP (metodologia de captação líquida sobre o SES): https://api.mziq.com/mzfilemanager/v2/d/3972906b-e50b-4f74-ab74-4d0d32125d11/ba4d6c1d-5f10-4cf0-9d59-ce0ae04abd2a?origin=2
+- Caixa Seguridade — Relatório de Desempenho Mensal (relatórios elaborados a partir do SES/SUSEP, usados como referência para o conceito de captação líquida): https://www.ri.caixaseguridade.com.br/relatorio-desempenho-mensal/
 - Decreto nº 12.499, de 11/06/2025 (IOF sobre seguros com cobertura por sobrevivência): https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/decreto/d12499.htm
 - Demarest Advogados — STF restabelece a eficácia do Decreto nº 12.499/2025 (decisão de 16/07/2025): https://www.demarest.com.br/majoracao-do-iof-stf-publica-decisao-cautelar-restabelecendo-a-eficacia-do-decreto-no-12-499-2025/
 - Databricks — Free Edition limitations: https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
