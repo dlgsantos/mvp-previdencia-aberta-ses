@@ -144,7 +144,7 @@ Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível s
 ### Dados brutos, estrutura e licença
 **Fonte:** SUSEP — SES, *Base de Dados do SES* (`BaseCompleta.zip`), gerada em 21/09/2026, dados até 07/2026 — https://www2.susep.gov.br/menuestatistica/ses/principal.aspx. Documentação oficial das tabelas: `Documentacao_das_tabelas.rtf` (mesma página).
 
-**Licença:** a página do SES informa que o sistema tem "o objetivo de fornecer ao público em geral estatísticas dos mercados supervisionados pela SUSEP". O download não traz um arquivo de licença específico. Os dados são publicados por órgão federal no âmbito da Política de Dados Abertos do Poder Executivo federal (Decreto nº 8.777/2016). O uso neste trabalho é acadêmico, não comercial, com citação da fonte. Os dados **não** são redistribuídos neste repositório.
+**Licença:** Não foi identificado arquivo de licença específico junto ao download. A base é disponibilizada publicamente pela SUSEP para fornecimento de estatísticas dos mercados supervisionados. Neste projeto, os dados são utilizados para finalidade acadêmica, com indicação da fonte, e os arquivos brutos não são redistribuídos no repositório.
 
 | Arquivo | Linhas* | Colunas (originais) | Conteúdo |
 |---|---|---|---|
