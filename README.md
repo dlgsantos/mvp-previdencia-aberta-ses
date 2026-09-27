@@ -225,7 +225,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.fato_fluxo_previdencia`
 *Fato de fluxos mensais por empresa e produto: contribuições, resgates, FLCR, portabilidade e captação líquida.*  
-**Linhagem:** silver.contribuicoes ⟗ silver.resgates ⟗ silver.portabilidade + ponte_empresa_grupo_mes; jan/2014–jul/2026.
+**Linhagem:** silver.contribuicoes ⟗ silver.resgates ⟗ silver.portabilidade, via FULL OUTER JOIN pela chave (mes_ref, cod_empresa, cod_produto), seguida de associação à gold.ponte_empresa_grupo_mes por (mes_ref, cod_empresa) para atribuição do grupo econômico vigente.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -249,7 +249,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.fato_pmbac`
 *Fato de estoque de PMBaC de fim de mês por empresa e produto.*  
-**Linhagem:** silver.pmbac + ponte_empresa_grupo_mes; jan/2014–jul/2026.
+**Linhagem:** silver.pmbac, associada à gold.ponte_empresa_grupo_mes por (mes_ref, cod_empresa) para atribuição do grupo econômico vigente.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -261,7 +261,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.ponte_empresa_grupo_mes`
 *Grupo vigente para cada empresa em cada mês (atribuição as-of).*  
-**Linhagem:** chaves dos fatos × silver.empresa_grupo_mensal (último grupo com mês ≤ mês do fato).
+**Linhagem:** chaves distintas (cod_empresa, mes_ref) provenientes das tabelas de fatos, associadas à silver.empresa_grupo_mensal por atribuição temporal (as-of), utilizando o último grupo econômico informado para a empresa com mês menor ou igual ao mês de referência.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -273,7 +273,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_tempo`
 *Dimensão de meses de jan/2014 a jul/2026.*  
-**Linhagem:** Gerada por sequence(); flags de ano completo e de período YTD (jan–jul).
+**Linhagem:** gerada no notebook 03_gold_modelo_catalogo.py por sequência mensal de mes_ref, com derivação dos atributos de ano, mês, trimestre, ano completo e período jan–jul.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -287,7 +287,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_produto`
 *Dimensão de produtos do escopo (VGBL, PGBL).*  
-**Linhagem:** Definida no notebook 03.
+**Linhagem:** Definida no notebook 03_gold_modelo_catalogo.py a partir dos dois produtos incluídos no escopo do projeto: VGBL e PGBL.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -297,7 +297,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_empresa`
 *Dimensão de empresas.*  
-**Linhagem:** silver.empresa.
+**Linhagem:** silver.empresa, com uma linha por cod_empresa e os respectivos dados cadastrais.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
@@ -306,7 +306,7 @@ O catálogo foi construído em três formas complementares:
 
 #### `gold.dim_grupo`
 *Dimensão de grupos econômicos (nome mais recente) + NAO_INFORMADO.*  
-**Linhagem:** silver.empresa_grupo_mensal.
+**Linhagem:** silver.empresa_grupo_mensal, consolidada por cod_grupo, utilizando o nome mais recente de cada grupo econômico e incluindo a categoria NAO_INFORMADO.
 
 | Coluna | Descrição | Tipo | Domínio observado | % nulos |
 |---|---|---|---|---|
