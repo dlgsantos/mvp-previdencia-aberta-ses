@@ -302,7 +302,7 @@ Detalhes, propriedades Delta e *constraints* da tabela fato (CSVs: [`constraints
 
 ## 4. Pipeline de Dados
 
-Quatro notebooks executados em sequência com computação *serverless*. Cada um lê a camada anterior e grava tabelas Delta gerenciadas pelo Unity Catalog, sobrescritas a cada execução.
+Quatro notebooks executados em sequência com computação *serverless*. Cada um lê a camada anterior e grava tabelas Delta gerenciadas pelo Unity Catalog, sobrescritas a cada execução, exceto silver.dq_resultados, à qual o notebook 03 acrescenta os testes da Gold; por isso a execução deve seguir a sequência completa 01 → 04.
 
 | Etapa | Notebook | Entrada | Saída | Principais transformações |
 |---|---|---|---|---|
@@ -499,7 +499,7 @@ O FLCR considera só contribuições e resgates dos próprios participantes; a c
 ### Discussão geral
 Em 2025, o FLCR do VGBL caiu 94%, enquanto a taxa de resgate permaneceu estável. Os resultados apontam, portanto, para maior peso da redução das contribuições nessa mudança, padrão que também se manteve em jan–jul/2026. A concentração das contribuições diminuiu, e a portabilidade teve peso suficiente para alterar o ranking de várias unidades. No mesmo ano houve mudanças na tributação de IOF sobre aportes em VGBL (Decreto nº 12.499/2025, com restabelecimento cautelar pelo STF em julho de 2025); a coincidência temporal é contexto relevante, mas não permite afirmar causalidade.
 
-As respostas se apoiam nos 83 testes executados, sem ocorrências classificadas como FALHA, além da conservação de totais Silver → Gold, na direção da portabilidade confirmada na fonte e na conciliação de contribuições PGBL entre duas fontes da SUSEP. As principais ressalvas são os valores nominais e a assimetria residual da portabilidade de mercado.
+As respostas se apoiam nos 83 testes executados, sem ocorrências classificadas como FALHA, além da conservação de totais Silver → Gold, da direção da portabilidade confirmada na fonte e da conciliação de contribuições PGBL entre duas fontes da SUSEP. As principais ressalvas são os valores nominais e a assimetria residual da portabilidade de mercado.
 
 ---
 
