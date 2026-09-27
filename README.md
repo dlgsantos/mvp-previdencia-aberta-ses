@@ -105,7 +105,7 @@ A SUSEP publica esses dados no SES, a partir dos Formulários de Informações P
 - divergências entre tabelas.
 
 ### Problema
-Não existe uma base integrada e auditável que permita acompanhar **entradas e saídas de recursos de VGBL e PGBL** e **distribuí-las entre grupos econômicos** com métricas definidas explicitamente. Comparar os arquivos do SES diretamente leva a erros de soma (sub-linhas e duplicatas), de atribuição (grupo econômico muda no tempo) e de interpretação (portabilidade misturada a contribuição).
+Os dados do SES estão distribuídos em diferentes arquivos e não estão diretamente integrados para acompanhar entradas e saídas de VGBL e PGBL por grupo econômico. Seu uso direto pode gerar erros de soma, atribuição de grupos ao longo do tempo e interpretação de fluxos como contribuições, resgates e portabilidades.
 
 ### Objetivo geral
 Construir, no Databricks, um pipeline Bronze → Silver → Gold reprodutível sobre o SES/SUSEP que responda às perguntas abaixo.
