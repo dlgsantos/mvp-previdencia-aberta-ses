@@ -96,7 +96,7 @@ Construir no Databricks um pipeline Bronze → Silver → Gold reprodutível sob
 | Taxa de resgate | Σ resgates do período ÷ média dos saldos mensais de PMBaC | resgates; `Ses_vgbl_fundos`, `ses_pgbl_fundos` | Denominador afetado por rentabilidade e portabilidade |
 | HHI | Σ (participação × 100)² das contribuições | `Ses_Contrib_Benef`, `Ses_grupos_economicos`, `Ses_cias` | Vai de 0 (pulverizado) a 10.000 (monopólio) |
 
-O grão base das tabelas utilizadas no cálculo das métricas é empresa × mês × produto, permitindo agregações por grupo, produto e ano. Nas Q3–Q5, a unidade de análise é a **unidade econômica**: o grupo vigente no mês ou, para empresas do código 99999, a própria empresa, identificada como "(sem grupo)".
+O grão base das tabelas utilizadas no cálculo das métricas é empresa × mês × produto, permitindo agregações por grupo, produto e ano. Nas Q3–Q5, a unidade de análise é a unidade econômica: o grupo vigente no mês ou, para empresas do código 99999, a própria empresa, identificada como "(sem grupo)".
 
 **Período:** jan/2014 a jul/2026. 2014 é o primeiro ano completo após a mudança de granularidade de 12/2013; as comparações anuais usam 2014–2025, e 2026 é comparado apenas em base jan–jul.
 
