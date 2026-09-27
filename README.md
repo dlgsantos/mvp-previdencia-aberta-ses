@@ -172,7 +172,7 @@ O grão de todas as métricas é empresa × mês × produto, agregável por grup
 ### 3.2 Catálogo de dados
 O catálogo existe em três formas complementares:
 1. `COMMENT` em cada tabela e coluna das camadas Silver e Gold no Unity Catalog, com descrição e linhagem;
-2. tabela `gold.catalogo_dados` (notebook 03), com descrição, tipo, domínio observado (mínimo/máximo ou categorias) e % de nulos de cada coluna da Silver e da Gold. A parte da Gold está em [`docs/evidencias/catalogo_dados_gold.csv`](docs/evidencias/catalogo_dados_gold.csv);
+2. tabela `gold.catalogo_dados` (notebook 03), com descrição, tipo, domínio observado (mínimo/máximo ou categorias) e % de nulos de cada coluna da Silver e da Gold. As duas partes foram exportadas: [`catalogo_dados_gold.csv`](docs/evidencias/catalogo_dados_gold.csv) e [`catalogo_dados_silver.csv`](docs/evidencias/catalogo_dados_silver.csv);
 3. linhagem capturada automaticamente pelo Unity Catalog (grafo abaixo).
 
 Transcrição do catálogo do modelo Gold:
@@ -285,11 +285,12 @@ Transcrição do catálogo do modelo Gold:
 | `pct_nulos` | Percentual de nulos da coluna. | double | [0 ; 100] |
 
 
-**Observações sobre domínios:** `fl_contribuicao_negativa` só tem `{false}` na Gold porque as 2 contribuições negativas da Silver são anteriores a 2014; o mínimo negativo de `vl_portab_aceita` (−R$ 780 mil) é um dos 5 valores negativos de portabilidade mantidos e sinalizados na Silver; `dim_empresa` e `dim_grupo` trazem o cadastro completo do mercado, enquanto os fatos usam 30 empresas e 21 grupos. O catálogo da Silver está nos `COMMENT`s do Unity Catalog e em `gold.catalogo_dados` (filtro `camada = 'SILVER'`).
+**Observações sobre domínios:** `fl_contribuicao_negativa` só tem `{false}` na Gold porque as 2 contribuições negativas da Silver são anteriores a 2014; o mínimo negativo de `vl_portab_aceita` (−R$ 780 mil) é um dos 5 valores negativos de portabilidade mantidos e sinalizados na Silver; `dim_empresa` e `dim_grupo` trazem o cadastro completo do mercado, enquanto os fatos usam 30 empresas e 21 grupos. O catálogo da Silver (descrição, tipo, domínio, % de nulos e linhagem por tabela e coluna) está nos `COMMENT`s do Unity Catalog, em `gold.catalogo_dados` (filtro `camada = 'SILVER'`) e exportado em [`catalogo_dados_silver.csv`](docs/evidencias/catalogo_dados_silver.csv).
 
 ![Catalog Explorer - colunas](docs/img/03_catalog_colunas.png)
 
 Linhagem capturada pelo Unity Catalog (`silver.contribuicoes`, `silver.resgates`, `silver.portabilidade` e `gold.ponte_empresa_grupo_mes` → `gold.fato_fluxo_previdencia`):
+
 ![Lineage](docs/img/03_lineage.png)
 
 Detalhes, propriedades Delta e *constraints* da tabela fato (CSVs: [`constraints_gold.csv`](docs/evidencias/constraints_gold.csv), [`describe_fato_fluxo_previdencia.csv`](docs/evidencias/describe_fato_fluxo_previdencia.csv)):
