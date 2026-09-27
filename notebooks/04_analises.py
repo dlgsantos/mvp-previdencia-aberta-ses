@@ -99,7 +99,7 @@ plt.tight_layout(); plt.show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q1:** as contribuições de VGBL cresceram 2,5× entre 2014 e 2024 (R$ 71 bi → R$ 178 bi) e caíram 22% em 2025 (R$ 139 bi), enquanto os resgates subiram (R$ 119 bi → R$ 136 bi). O FLCR do VGBL caiu de R$ 59,0 bi para R$ 3,5 bi, com valores mensais negativos no 2º semestre de 2025. Em jan–jul/2026 o FLCR (R$ 8,0 bi) é o menor da série comparável. No PGBL o FLCR é pequeno e positivo em todos os anos, mas negativo em todo jan–jul: as contribuições se concentram em dezembro (dedução do IR).
+# MAGIC **Interpretação Q1:** as contribuições de VGBL passaram de R$ 71,3 bi (2014) para R$ 178,3 bi (2024) e caíram 22% em 2025 (R$ 139,3 bi), enquanto os resgates subiram para R$ 135,8 bi. O FLCR do VGBL caiu de R$ 59,0 bi para R$ 3,5 bi, com valores mensais negativos em vários meses do 2º semestre de 2025. Em jan–jul/2026 o FLCR do VGBL (R$ 8,0 bi) é o menor da série jan–jul calculada (2021–2026). No PGBL o FLCR anual foi positivo em todos os anos, mas o de jan–jul foi negativo em 2021–2026, porque as contribuições se concentram em dezembro (dedução do IR).
 
 # COMMAND ----------
 
@@ -135,7 +135,7 @@ plt.tight_layout(); plt.show()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q2:** a taxa de resgate do VGBL ficou em 10,1% em 2024 e em 2025, e em jan–jul/2026 é a menor da série comparável (5,1%). No PGBL ela é estável (5,3%–6,5%). Os resgates cresceram na mesma proporção do estoque. Logo, a queda do FLCR (Q1) vem da redução das contribuições, e não de uma saída proporcionalmente maior de recursos.
+# MAGIC **Interpretação Q2:** a taxa de resgate do VGBL caiu de 12,5% (2014) para 8,7% (2019), subiu até 12,3% (2022) e ficou em 10,1% em 2024 e 2025; em jan–jul/2026 (5,1%) é a menor da série jan–jul calculada. No PGBL variou entre 5,3% e 6,5%. Os resgates de VGBL cresceram em valor em 2025, mas na mesma proporção do estoque, o que indica que a queda do FLCR está associada principalmente à redução das contribuições, e não a uma saída proporcionalmente maior de recursos.
 
 # COMMAND ----------
 
@@ -194,7 +194,7 @@ FROM s WHERE pos <= 5 AND ano IN (2014, 2025) ORDER BY cod_produto, ano, pos
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q3:** o mercado desconcentrou nos dois produtos. No VGBL, o HHI caiu de 2.774 para 2.026 e a participação dos 5 maiores foi de 96% para 91%. No PGBL, o HHI caiu de 1.992 para 1.445 e a dos 5 maiores de 84% para 79%. No PGBL, o Itaú assumiu a liderança e Icatu e XP entraram entre os 5 maiores. No VGBL, a Caixa subiu para 3º.
+# MAGIC **Interpretação Q3:** as contribuições seguem concentradas, mas menos que em 2014. O HHI caiu 27% nos dois produtos (VGBL 2.774 → 2.026; PGBL 1.992 → 1.445). No VGBL os 5 maiores ainda somam mais de 90%, e a Caixa passou de 5º para 3º; no PGBL a participação dos 5 maiores caiu para 78,5%, o Itaú assumiu a liderança e Icatu e XP entraram no lugar de HSBC e Caixa.
 
 # COMMAND ----------
 
@@ -266,7 +266,7 @@ GROUP BY ALL ORDER BY nome_unidade, ano
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q4:** em 2025, XP (+R$ 17,0 bi), Banco Pactual (+R$ 7,8 bi) e Itaú (+R$ 7,5 bi) foram os maiores receptores líquidos de portabilidade. Icatu (−R$ 10,0 bi), Brasil (−R$ 9,9 bi), Sul América (−R$ 4,6 bi) e Bradesco (−R$ 3,6 bi) foram os maiores cedentes líquidos. Para XP e Banco Pactual, o saldo de portabilidade supera as próprias contribuições do ano. No mercado como um todo, o saldo é pequeno (+R$ 1,9 bi sobre R$ 67,8 bi portados).
+# MAGIC **Interpretação Q4:** no mercado, o saldo é pequeno diante do volume portado (2025: R$ 67,8 bi aceitos, R$ 65,9 bi cedidos, saldo de +R$ 1,9 bi). Em 2025 os maiores saldos positivos foram de XP (+R$ 17,0 bi), Banco Pactual (+R$ 7,8 bi) e Itaú (+R$ 7,5 bi), e os maiores negativos de Icatu (−R$ 10,0 bi), Brasil (−R$ 9,9 bi), Sul América (−R$ 4,6 bi) e Bradesco (−R$ 3,6 bi). Para XP e Banco Pactual o saldo superou as contribuições do ano. Como a base não identifica a contraparte de cada transferência, não é possível dizer de qual unidade saíram os recursos recebidos por outra.
 
 # COMMAND ----------
 
@@ -317,7 +317,7 @@ FROM (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **Interpretação Q5:** das 19 unidades, 15 mudam de posição e 5 mudam de sinal quando a portabilidade é incluída. A XP passa de 18º no FLCR para 1º em captação líquida, a Icatu cai de 3º para 18º e a Caixa de 1º para 4º. O ranking de "quem cresce" depende da métrica.
+# MAGIC **Interpretação Q5:** o FLCR considera só contribuições e resgates dos próprios participantes; a captação líquida soma a ele o saldo de portabilidade. Das 19 unidades com contribuições em 2025, 15 mudam de posição e 5 mudam de sinal entre as duas métricas: a XP vai de 18º a 1º, a Icatu de 3º a 18º e a Caixa, primeira no FLCR, cai para 4º. Comparações entre unidades precisam deixar claro qual métrica usam.
 # MAGIC
 # MAGIC ## Discussão geral
-# MAGIC 2014–2024 foi uma década de crescimento. Em 2025 houve uma ruptura na entrada de contribuições de VGBL, sem aumento proporcional dos resgates (taxa estável). A concentração do mercado caiu, e a portabilidade redistribui dezenas de bilhões por ano dos grandes grupos bancários para unidades como XP, Banco Pactual e Itaú. A queda de 2025 coincide temporalmente com a mudança do IOF sobre aportes em VGBL (Decretos 12.466 e 12.499/2025), mas nenhuma relação causal é afirmada. Limitações: valores nominais, VGBL sem abertura por UF, conciliação PGBL parcial e soma de portabilidade de mercado não exatamente simétrica. Discussão completa no README.
+# MAGIC Em 2025 o FLCR do VGBL caiu 94% com taxa de resgate estável, ou seja, a mudança veio sobretudo das contribuições, e o quadro se manteve em jan–jul/2026. A concentração das contribuições diminuiu, e a portabilidade teve peso suficiente para alterar o ranking de várias unidades. No mesmo ano houve mudanças na tributação de IOF sobre aportes em VGBL (Decreto nº 12.499/2025); a coincidência temporal é contexto relevante, mas não permite afirmar causalidade. Limitações: valores nominais, VGBL sem abertura por UF, conciliação PGBL parcial e assimetria residual da portabilidade de mercado. Discussão completa no README.
