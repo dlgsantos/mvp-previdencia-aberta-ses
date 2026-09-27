@@ -412,7 +412,7 @@ Consultas Spark SQL do notebook [`04_analises.py`](notebooks/04_analises.py) sob
 | 2025 | 92,3 | 78,3 | 14,1 | −2,1 |
 | 2026 | 82,8 | 74,8 | **8,0** | −0,8 |
 
-As contribuições de VGBL passaram de R$ 71,3 bi (2014) para R$ 178,3 bi (2024) e caíram 22% em 2025, enquanto os resgates subiram para R$ 135,8 bi; o FLCR caiu de R$ 59,0 bi para R$ 3,5 bi, e a relação resgate/contribuição, entre 0,43 e 0,78 até 2024, chegou a 0,97. Em jan–jul/2026 o FLCR do VGBL (R$ 8,0 bi) é o menor da série jan–jul calculada (2021–2026). No PGBL o FLCR anual foi positivo em todos os anos, mas o de jan–jul foi negativo em 2021–2026, porque as contribuições se concentram em dezembro, por causa da dedução no IR.
+As contribuições de VGBL passaram de R$ 71,3 bi (2014) para R$ 178,3 bi (2024) e caíram 22% em 2025, enquanto os resgates subiram para R$ 135,8 bi; o FLCR caiu de R$ 59,0 bi para R$ 3,5 bi, e a relação resgate/contribuição, entre 0,43 e 0,78 até 2024, chegou a 0,97. Em jan–jul/2026 o FLCR do VGBL (R$ 8,0 bi) é o menor da série jan–jul calculada (2021–2026). No PGBL, o FLCR anual foi positivo em todos os anos, enquanto o acumulado de jan–jul foi negativo entre 2021 e 2026. O resultado é compatível com a concentração das contribuições no fim do ano, período relevante para o aproveitamento da dedução fiscal do PGBL.
 
 ![Q1 anual](docs/img/04_q1_anual.png)
 ![Q1 gráfico](docs/img/04_q1_grafico.png)
